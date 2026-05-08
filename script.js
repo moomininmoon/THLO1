@@ -19,7 +19,7 @@ const firebaseConfig = {
     apiKey: "AIzaSyCzcdf8QBZFTtKh6vTM2f_Awb9Vncb3EtU",
     authDomain: "tanhalaw-e5d06.firebaseapp.com",
     projectId: "tanhalaw-e5d06",
-    storageBucket: ""tanhalaw-e5d06.firebasestorage.app",
+    storageBucket: "tanhalaw-e5d06.firebasestorage.app",
     messagingSenderId: "882787510142",
     appId: "1:882787510142:web:36f4b2342ed9a2dfcd752f"
 };
