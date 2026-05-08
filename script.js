@@ -7,7 +7,7 @@ import {
     getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
-    getFirestore, collection, addDoc, getDocs, query, orderBy, where,
+    getFirestore, collection, addDoc, getDoc, getDocs, query, orderBy, where,
     deleteDoc, doc, updateDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
@@ -100,7 +100,16 @@ onAuthStateChanged(auth, (user) => {
     if (adminMenu) adminMenu.hidden = !isAdmin;
     if (adminSection) adminSection.hidden = !isAdmin;
 
-    loadCases();
+    // 페이지에 cases-list가 있으면 다시 로드 (관리자 권한 따라 삭제 버튼 표시 변동)
+    if ($("#cases-list")) {
+        allCasesCache = null;
+        loadCases();
+    }
+
+    // 사례 상세 페이지면 다시 그리기 (관리자 삭제 버튼 표시)
+    if ($("#case-article")) {
+        loadCaseDetail();
+    }
 });
 
 /* ---------- Consultation ---------- */
@@ -158,53 +167,99 @@ if (consultForm) {
 }
 
 /* ---------- Cases ---------- */
+let allCasesCache = null;     // 페이지에서 한 번만 로드 후 캐시
+let currentFilter = "all";
+
 async function loadCases() {
     const list = $("#cases-list");
     if (!list) return;
 
-    try {
-        const q = query(collection(db, "cases"), orderBy("timestamp", "desc"));
-        const snap = await getDocs(q);
+    const limit = parseInt(list.dataset.limit || "0", 10);
 
-        if (snap.empty) {
-            list.innerHTML = `<div class="cases-empty">아직 등록된 사례가 없습니다.</div>`;
+    try {
+        if (!allCasesCache) {
+            const q = query(collection(db, "cases"), orderBy("timestamp", "desc"));
+            const snap = await getDocs(q);
+            allCasesCache = [];
+            snap.forEach(s => allCasesCache.push({ id: s.id, ...s.data() }));
+        }
+
+        // 필터 적용
+        let items = allCasesCache;
+        if (currentFilter !== "all") {
+            items = items.filter(d => (d.category || "기타") === currentFilter);
+        }
+        // limit 적용
+        if (limit > 0) items = items.slice(0, limit);
+
+        if (items.length === 0) {
+            list.innerHTML = `<div class="cases-empty">${
+                currentFilter === "all"
+                    ? "아직 등록된 사례가 없습니다."
+                    : "해당 분야의 사례가 없습니다."
+            }</div>`;
             return;
         }
 
         const isAdmin = auth.currentUser && auth.currentUser.email === ADMIN_EMAIL;
-        const html = [];
+        const html = items.map(d => {
+            const id       = d.id;
+            const title    = escapeHTML(d.title || "(제목 없음)");
+            const category = escapeHTML(d.category || "기타");
+            const summary  = escapeHTML(d.summary || (d.content ? d.content.slice(0, 100) : ""));
+            const date     = formatCaseDate(d.judgmentDate || d.timestamp);
 
-        snap.forEach((docSnap) => {
-            const d  = docSnap.data();
-            const id = docSnap.id;
+            // 첫번째 이미지 (다중 이미지 배열 또는 단일 imageUrl 호환)
+            let firstImg = null;
+            if (Array.isArray(d.images) && d.images.length > 0) firstImg = d.images[0];
+            else if (d.imageUrl) firstImg = d.imageUrl;
 
-            const imgHtml = d.imageUrl
-                ? `<img src="${escapeHTML(d.imageUrl)}" alt="${escapeHTML(d.title || '')}" class="case-img" loading="lazy">`
-                : "";
+            const imgHtml = firstImg
+                ? `<img src="${escapeHTML(firstImg)}" alt="${title}" class="case-img" loading="lazy">`
+                : `<div class="case-no-img">No Image</div>`;
 
             const delHtml = isAdmin
-                ? `<div class="case-actions">
-                       <button class="delete-btn" data-action="delete-case" data-id="${escapeHTML(id)}">삭제</button>
-                   </div>`
+                ? `<button class="delete-btn" data-action="delete-case" data-id="${escapeHTML(id)}" type="button">삭제</button>`
                 : "";
 
-            html.push(`
-                <article class="case-card">
+            return `
+                <a href="case.html?id=${encodeURIComponent(id)}" class="case-card">
                     ${imgHtml}
                     <div class="case-body">
-                        <h3>${escapeHTML(d.title || "(제목 없음)")}</h3>
-                        <p>${nl2br(d.content || "")}</p>
-                        ${delHtml}
+                        <div class="case-meta">
+                            <span class="case-category">${category}</span>
+                            ${date ? `<span>${escapeHTML(date)}</span>` : ""}
+                        </div>
+                        <h3>${title}</h3>
+                        <p>${summary}</p>
+                        ${delHtml ? `<div class="case-actions">${delHtml}</div>` : ""}
                     </div>
-                </article>
-            `);
-        });
+                </a>
+            `;
+        }).join("");
 
-        list.innerHTML = html.join("");
+        list.innerHTML = html;
     } catch (err) {
         console.error(err);
         list.innerHTML = `<div class="cases-empty">사례를 불러오는 데 실패했습니다.</div>`;
     }
+}
+
+function formatCaseDate(ts) {
+    if (!ts) return "";
+    let d;
+    if (typeof ts === "string") {
+        // YYYY-MM-DD 형식
+        d = new Date(ts);
+    } else if (ts.toDate) {
+        d = ts.toDate();
+    } else {
+        d = new Date(ts);
+    }
+    if (isNaN(d.getTime())) return "";
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    return `${yyyy}.${mm}`;
 }
 
 async function deleteCase(id) {
@@ -212,6 +267,7 @@ async function deleteCase(id) {
     if (!confirm("이 사례를 삭제하시겠습니까?")) return;
     try {
         await deleteDoc(doc(db, "cases", id));
+        allCasesCache = null;  // 캐시 무효화
         await loadCases();
     } catch (err) {
         console.error(err);
@@ -435,9 +491,12 @@ if (postForm) {
         btn.disabled = true;
         btn.textContent = "업로드 중";
 
-        const file    = $("#post-image")?.files?.[0] || null;
-        const title   = $("#post-title-input").value.trim();
-        const content = $("#post-content").value.trim();
+        const files    = Array.from($("#post-image")?.files || []);
+        const title    = $("#post-title-input").value.trim();
+        const content  = $("#post-content").value.trim();
+        const category = $("#post-category")?.value || "기타";
+        const summary  = $("#post-summary")?.value.trim() || "";
+        const judgmentDate = $("#post-date")?.value || "";
 
         if (!title || !content) {
             alert("제목과 내용을 모두 입력해주세요.");
@@ -446,22 +505,29 @@ if (postForm) {
         }
 
         try {
-            let imageUrl = null;
-            if (file) {
+            const images = [];
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                btn.textContent = `이미지 업로드 ${i + 1}/${files.length}`;
                 const safeName = file.name.replace(/[^\w.\-]/g, "_");
-                const sRef = ref(storage, `cases/${Date.now()}_${safeName}`);
+                const sRef = ref(storage, `cases/${Date.now()}_${i}_${safeName}`);
                 await uploadBytes(sRef, file);
-                imageUrl = await getDownloadURL(sRef);
+                const url = await getDownloadURL(sRef);
+                images.push(url);
             }
 
+            btn.textContent = "저장 중";
             await addDoc(collection(db, "cases"), {
-                title, content, imageUrl,
+                title, content, summary, category, judgmentDate,
+                images,
+                imageUrl: images[0] || null,  // 하위 호환
                 timestamp: serverTimestamp()
             });
 
             alert("성공사례가 등록되었습니다.");
             postForm.reset();
             closeModal("post-modal");
+            allCasesCache = null;  // 캐시 무효화
             await loadCases();
         } catch (err) {
             console.error(err);
@@ -624,4 +690,178 @@ document.addEventListener("click", (e) => {
         top: t.getBoundingClientRect().top + window.scrollY - headerH + 1,
         behavior: "smooth"
     });
+});
+
+/* ---------- Cases filter (cases.html) ---------- */
+const casesFilter = $("#cases-filter");
+if (casesFilter) {
+    casesFilter.addEventListener("click", (e) => {
+        const btn = e.target.closest(".filter-btn");
+        if (!btn) return;
+        const filter = btn.dataset.filter;
+        if (!filter) return;
+
+        $$(".filter-btn", casesFilter).forEach(b => b.classList.remove("is-active"));
+        btn.classList.add("is-active");
+        currentFilter = filter;
+        loadCases();
+    });
+}
+
+/* ---------- Case detail page (case.html) ---------- */
+async function loadCaseDetail() {
+    const article = $("#case-article");
+    if (!article) return;  // case.html이 아니면 무시
+
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("id");
+
+    if (!id) {
+        article.innerHTML = `
+            <div class="container container-narrow">
+                <div class="case-detail-error">
+                    잘못된 접근입니다.<br>
+                    <a href="cases.html" style="color:var(--c-ink); border-bottom:1px solid var(--c-ink); padding-bottom:1px;">사례 목록으로 돌아가기</a>
+                </div>
+            </div>`;
+        document.title = "사례를 찾을 수 없습니다 | 법률사무소 탄하";
+        return;
+    }
+
+    try {
+        const snap = await getDoc(doc(db, "cases", id));
+        if (!snap.exists()) {
+            article.innerHTML = `
+                <div class="container container-narrow">
+                    <div class="case-detail-error">
+                        해당 사례를 찾을 수 없습니다.<br>
+                        <a href="cases.html" style="color:var(--c-ink); border-bottom:1px solid var(--c-ink); padding-bottom:1px;">사례 목록으로 돌아가기</a>
+                    </div>
+                </div>`;
+            document.title = "사례를 찾을 수 없습니다 | 법률사무소 탄하";
+            return;
+        }
+
+        const d = snap.data();
+        const title    = escapeHTML(d.title || "(제목 없음)");
+        const category = escapeHTML(d.category || "기타");
+        const summary  = escapeHTML(d.summary || "");
+        const content  = escapeHTML(d.content || "");
+        const date     = formatCaseDate(d.judgmentDate || d.timestamp);
+
+        document.title = `${d.title || '성공 사례'} | 법률사무소 탄하`;
+
+        // 이미지 (배열 또는 단일 imageUrl 호환)
+        let images = [];
+        if (Array.isArray(d.images)) images = d.images;
+        else if (d.imageUrl) images = [d.imageUrl];
+
+        const imagesHtml = images.length > 0
+            ? `<div class="case-detail-images">
+                  ${images.map(url => `<img src="${escapeHTML(url)}" alt="${title}" data-action="open-lightbox" loading="lazy">`).join("")}
+               </div>`
+            : "";
+
+        const isAdmin = auth.currentUser && auth.currentUser.email === ADMIN_EMAIL;
+        const adminHtml = isAdmin
+            ? `<div class="case-detail-admin">
+                   <button class="delete-btn" data-action="delete-case-detail" data-id="${escapeHTML(id)}" type="button">사례 삭제</button>
+               </div>`
+            : "";
+
+        article.innerHTML = `
+            <div class="container container-narrow">
+                <div class="case-detail-back">
+                    <a href="cases.html">← 사례 목록</a>
+                </div>
+                <div class="case-detail-meta">
+                    <span class="case-category">${category}</span>
+                    ${date ? `<span>${escapeHTML(date)}</span>` : ""}
+                </div>
+                <h1 class="case-detail-title">${title}</h1>
+                ${summary ? `<p class="case-detail-summary">${summary}</p>` : ""}
+                ${imagesHtml}
+                <div class="case-detail-content">${content}</div>
+                ${adminHtml}
+            </div>
+        `;
+    } catch (err) {
+        console.error(err);
+        article.innerHTML = `
+            <div class="container container-narrow">
+                <div class="case-detail-error">
+                    사례를 불러오는 데 실패했습니다.<br>
+                    ${escapeHTML(err?.message || '')}
+                </div>
+            </div>`;
+    }
+}
+
+// case.html에서 페이지 로드되면 상세 호출 — auth 상태에 따라 admin 버튼 다르게 표시되어야 하므로 onAuthStateChanged 안에서도 호출됨
+if ($("#case-article")) {
+    // auth 초기화 후 자동 호출되지만, 초기 진입 시 빠르게 표시되도록 한 번 더 호출
+    loadCaseDetail();
+}
+
+// 상세 페이지의 사례 삭제 (목록과 다른 동작 — 삭제 후 목록으로 이동)
+async function deleteCaseFromDetail(id) {
+    if (!id) return;
+    if (!confirm("이 사례를 삭제하시겠습니까?")) return;
+    try {
+        await deleteDoc(doc(db, "cases", id));
+        alert("삭제되었습니다.");
+        window.location.href = "cases.html";
+    } catch (err) {
+        console.error(err);
+        alert("삭제에 실패했습니다.");
+    }
+}
+
+/* ---------- Lightbox (case detail images) ---------- */
+function openLightbox(src) {
+    const lb = $("#lightbox");
+    const img = $("#lightbox-img");
+    if (!lb || !img) return;
+    img.src = src;
+    lb.classList.add("is-open");
+    lb.setAttribute("aria-hidden", "false");
+    document.body.classList.add("modal-open");
+}
+function closeLightbox() {
+    const lb = $("#lightbox");
+    if (!lb) return;
+    lb.classList.remove("is-open");
+    lb.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("modal-open");
+}
+
+// 라이트박스 액션 (delegation 내에서 처리)
+document.addEventListener("click", (e) => {
+    const target = e.target;
+
+    // 이미지 클릭 시 라이트박스 열기
+    if (target.matches?.('[data-action="open-lightbox"]')) {
+        e.preventDefault();
+        openLightbox(target.src);
+        return;
+    }
+
+    // 라이트박스 닫기 (배경 또는 닫기 버튼)
+    if (target.matches?.('[data-action="close-lightbox"]') ||
+        target.closest?.('[data-action="close-lightbox"]')) {
+        closeLightbox();
+        return;
+    }
+
+    // 상세 페이지 삭제
+    const detailDeleteBtn = target.closest?.('[data-action="delete-case-detail"]');
+    if (detailDeleteBtn) {
+        e.preventDefault();
+        deleteCaseFromDetail(detailDeleteBtn.dataset.id);
+    }
+});
+
+// ESC로 라이트박스도 닫기
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeLightbox();
 });

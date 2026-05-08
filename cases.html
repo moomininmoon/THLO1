@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>성공 사례 | 법률사무소 탄하</title>
+    <meta name="description" content="법률사무소 탄하의 주요 성공 사례를 소개합니다.">
+
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="page-subpage">
+
+    <header id="main-header" class="is-subpage">
+        <nav class="navbar">
+            <a href="index.html" class="logo">TANHA</a>
+            <ul class="nav-links">
+                <li><a href="index.html#about">Professionals</a></li>
+                <li><a href="index.html#consultation">Consultation</a></li>
+                <li><a href="cases.html" class="is-current">Cases</a></li>
+                <li><a href="index.html#contact">Contact</a></li>
+                <li id="admin-menu" hidden><a href="#" data-action="open-consults">상담 조회</a></li>
+                <li id="auth-menu"><a href="#" data-action="open-login">Login</a></li>
+            </ul>
+            <button class="nav-toggle" aria-label="메뉴 열기">
+                <span></span><span></span>
+            </button>
+        </nav>
+    </header>
+
+    <main class="subpage-main">
+        <header class="subpage-hero">
+            <div class="container">
+                <span class="eyebrow">Success Cases</span>
+                <h1 class="subpage-title">성공 사례</h1>
+                <p class="subpage-desc">의뢰인과 함께 만들어낸 결과들을 소개합니다.</p>
+            </div>
+        </header>
+
+        <section class="section">
+            <div class="container">
+                <div class="cases-filter" id="cases-filter">
+                    <button class="filter-btn is-active" data-filter="all">전체</button>
+                    <button class="filter-btn" data-filter="민사">민사</button>
+                    <button class="filter-btn" data-filter="형사">형사</button>
+                    <button class="filter-btn" data-filter="가사/상속">가사/상속</button>
+                    <button class="filter-btn" data-filter="행정">행정</button>
+                    <button class="filter-btn" data-filter="기타">기타</button>
+                </div>
+
+                <div id="cases-list" class="cases-grid" aria-live="polite">
+                    <div class="cases-empty">불러오는 중입니다.</div>
+                </div>
+
+                <div class="admin-controls" id="admin-only-section" hidden>
+                    <button class="btn btn-outline" data-action="open-post">새 성공사례 등록</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container footer-inner">
+            <div class="footer-logo">TANHA</div>
+            <p>&copy; 2024 TANHA LAW OFFICE. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+    <div id="login-modal" class="modal" aria-hidden="true">
+        <div class="modal-backdrop" data-action="close-modal" data-target="login-modal"></div>
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="login-title">
+            <button class="modal-close" data-action="close-modal" data-target="login-modal" aria-label="닫기">×</button>
+            <h3 id="login-title" class="modal-title">관리자 로그인</h3>
+            <form id="auth-form" class="modal-form" novalidate>
+                <div class="field">
+                    <label for="auth-email">이메일</label>
+                    <input type="email" id="auth-email" required>
+                </div>
+                <div class="field">
+                    <label for="auth-password">비밀번호</label>
+                    <input type="password" id="auth-password" required>
+                </div>
+                <button type="submit" class="btn btn-primary">로그인</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="post-modal" class="modal" aria-hidden="true">
+        <div class="modal-backdrop" data-action="close-modal" data-target="post-modal"></div>
+        <div class="modal-content modal-lg" role="dialog" aria-modal="true" aria-labelledby="post-title">
+            <button class="modal-close" data-action="close-modal" data-target="post-modal" aria-label="닫기">×</button>
+            <h3 id="post-title" class="modal-title">성공사례 등록</h3>
+            <form id="post-form" class="modal-form" novalidate>
+                <div class="form-grid">
+                    <div class="field">
+                        <label for="post-category">분야</label>
+                        <select id="post-category" required>
+                            <option value="민사">민사</option>
+                            <option value="형사">형사</option>
+                            <option value="가사/상속">가사/상속</option>
+                            <option value="행정">행정</option>
+                            <option value="기타">기타</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="post-date">판결 일자 (선택)</label>
+                        <input type="date" id="post-date">
+                    </div>
+                </div>
+                <div class="field">
+                    <label for="post-title-input">제목</label>
+                    <input type="text" id="post-title-input" required placeholder="예) 손해배상 청구 사건 승소">
+                </div>
+                <div class="field">
+                    <label for="post-summary">요약 <em>(목록에 표시될 한 줄 설명)</em></label>
+                    <input type="text" id="post-summary" placeholder="짧게 요약해주세요">
+                </div>
+                <div class="field">
+                    <label for="post-content">상세 내용</label>
+                    <textarea id="post-content" required></textarea>
+                </div>
+                <div class="field">
+                    <label for="post-image">이미지 첨부 <em>(여러 장 선택 가능)</em></label>
+                    <input type="file" id="post-image" accept="image/*" multiple>
+                </div>
+                <button type="submit" class="btn btn-primary">등록</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="consults-modal" class="modal" aria-hidden="true">
+        <div class="modal-backdrop" data-action="close-modal" data-target="consults-modal"></div>
+        <div class="modal-content modal-xl" role="dialog" aria-modal="true" aria-labelledby="consults-title">
+            <button class="modal-close" data-action="close-modal" data-target="consults-modal" aria-label="닫기">×</button>
+            <header class="modal-header">
+                <h3 id="consults-title" class="modal-title">접수된 상담 내역</h3>
+                <p class="modal-subtitle"><span id="consults-count">0</span>건</p>
+            </header>
+            <div id="consults-list" class="consults-list" aria-live="polite">
+                <div class="consults-empty">불러오는 중입니다.</div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>

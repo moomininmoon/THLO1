@@ -160,8 +160,12 @@
                 <h2 class="section-title">성공 사례</h2>
             </header>
 
-            <div id="cases-list" class="cases-grid" aria-live="polite">
+            <div id="cases-list" class="cases-grid" data-limit="6" aria-live="polite">
                 <div class="cases-empty">불러오는 중입니다.</div>
+            </div>
+
+            <div class="cases-more">
+                <a href="cases.html" class="btn btn-outline">전체 사례 보기</a>
             </div>
 
             <div class="admin-controls" id="admin-only-section" hidden>
@@ -230,18 +234,43 @@
             <button class="modal-close" data-action="close-modal" data-target="post-modal" aria-label="닫기">×</button>
             <h3 id="post-title" class="modal-title">성공사례 등록</h3>
             <form id="post-form" class="modal-form" novalidate>
-                <div class="field">
-                    <label for="post-image">대표 이미지 (선택)</label>
-                    <input type="file" id="post-image" accept="image/*">
+                <div class="form-grid">
+                    <div class="field">
+                        <label for="post-category">분야</label>
+                        <select id="post-category" required>
+                            <option value="민사">민사</option>
+                            <option value="형사">형사</option>
+                            <option value="가사/상속">가사/상속</option>
+                            <option value="행정">행정</option>
+                            <option value="기타">기타</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="post-date">판결 일자 (선택)</label>
+                        <input type="date" id="post-date">
+                    </div>
                 </div>
+
                 <div class="field">
                     <label for="post-title-input">제목</label>
-                    <input type="text" id="post-title-input" required>
+                    <input type="text" id="post-title-input" required placeholder="예) 손해배상 청구 사건 승소">
                 </div>
+
+                <div class="field">
+                    <label for="post-summary">요약 <em>(목록에 표시될 한 줄 설명)</em></label>
+                    <input type="text" id="post-summary" placeholder="짧게 요약해주세요">
+                </div>
+
                 <div class="field">
                     <label for="post-content">상세 내용</label>
-                    <textarea id="post-content" required></textarea>
+                    <textarea id="post-content" required placeholder="판결 요지, 사건 개요, 쟁점 등을 자세히 기재해주세요."></textarea>
                 </div>
+
+                <div class="field">
+                    <label for="post-image">이미지 첨부 <em>(여러 장 선택 가능)</em></label>
+                    <input type="file" id="post-image" accept="image/*" multiple>
+                </div>
+
                 <button type="submit" class="btn btn-primary">등록</button>
             </form>
         </div>

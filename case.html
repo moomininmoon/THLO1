@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>성공 사례 | 법률사무소 탄하</title>
+
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="page-subpage">
+
+    <header id="main-header" class="is-subpage">
+        <nav class="navbar">
+            <a href="index.html" class="logo">TANHA</a>
+            <ul class="nav-links">
+                <li><a href="index.html#about">Professionals</a></li>
+                <li><a href="index.html#consultation">Consultation</a></li>
+                <li><a href="cases.html" class="is-current">Cases</a></li>
+                <li><a href="index.html#contact">Contact</a></li>
+                <li id="admin-menu" hidden><a href="#" data-action="open-consults">상담 조회</a></li>
+                <li id="auth-menu"><a href="#" data-action="open-login">Login</a></li>
+            </ul>
+            <button class="nav-toggle" aria-label="메뉴 열기">
+                <span></span><span></span>
+            </button>
+        </nav>
+    </header>
+
+    <main class="subpage-main">
+        <article id="case-article" class="case-detail">
+            <div class="container container-narrow">
+                <div class="case-detail-loading">불러오는 중입니다.</div>
+            </div>
+        </article>
+
+        <div class="case-foot">
+            <div class="container container-narrow">
+                <a href="cases.html" class="btn btn-outline">← 사례 목록으로 돌아가기</a>
+            </div>
+        </div>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container footer-inner">
+            <div class="footer-logo">TANHA</div>
+            <p>&copy; 2024 TANHA LAW OFFICE. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+    <div id="login-modal" class="modal" aria-hidden="true">
+        <div class="modal-backdrop" data-action="close-modal" data-target="login-modal"></div>
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="login-title">
+            <button class="modal-close" data-action="close-modal" data-target="login-modal" aria-label="닫기">×</button>
+            <h3 id="login-title" class="modal-title">관리자 로그인</h3>
+            <form id="auth-form" class="modal-form" novalidate>
+                <div class="field">
+                    <label for="auth-email">이메일</label>
+                    <input type="email" id="auth-email" required>
+                </div>
+                <div class="field">
+                    <label for="auth-password">비밀번호</label>
+                    <input type="password" id="auth-password" required>
+                </div>
+                <button type="submit" class="btn btn-primary">로그인</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="lightbox" class="lightbox" aria-hidden="true" data-action="close-lightbox">
+        <button class="lightbox-close" data-action="close-lightbox" aria-label="닫기">×</button>
+        <img id="lightbox-img" alt="">
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
