@@ -392,37 +392,7 @@ async function deleteConsult(id) {
         alert("삭제에 실패했습니다.");
     }
 }
-/* ---------- Video Control ---------- */
-.video-control {
-    position: absolute;
-    bottom: 40px;
-    right: 40px;
-    z-index: 10;
-    background: rgba(255, 255, 255, 0.05); /* 배경에 거의 안 보이게 스며듦 */
-    border: 1px solid rgba(255, 255, 255, 0.15); /* 아주 얇고 투명한 테두리 */
-    color: rgba(255, 255, 255, 0.4);
-    padding: 8px 18px;
-    font-family: var(--f-serif); /* 사이트 테마에 맞춘 고급스러운 영문 폰트 */
-    font-style: italic;
-    font-size: 14px;
-    letter-spacing: 0.05em;
-    border-radius: 30px;
-    transition: all var(--t-base);
-    backdrop-filter: blur(4px);
-}
-.video-control:hover {
-    background: rgba(255, 255, 255, 0.15);
-    color: #fff;
-    border-color: rgba(255, 255, 255, 0.6);
-}
 
-/* 모바일 화면에서는 버튼 위치를 조금 더 안쪽으로 조정 */
-@media (max-width: 768px) {
-    .video-control {
-        bottom: 24px;
-        right: 24px;
-    }
-}
 
 /* ---------- My-lookup (신청자 본인 조회) ---------- */
 const mylookupForm = $("#mylookup-form");
@@ -896,3 +866,18 @@ document.addEventListener("click", (e) => {
 document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeLightbox();
 });
+/* ---------- Video Control ---------- */
+const videoElem = $("#main-video");
+const videoBtn = $("#video-control-btn");
+
+if (videoElem && videoBtn) {
+    videoBtn.addEventListener("click", () => {
+        if (videoElem.paused) {
+            videoElem.play();
+            videoBtn.textContent = "Pause";
+        } else {
+            videoElem.pause();
+            videoBtn.textContent = "Play";
+        }
+    });
+}
