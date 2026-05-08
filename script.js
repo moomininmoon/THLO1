@@ -7,8 +7,8 @@ import {
     getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
-    getFirestore, collection, addDoc, getDocs, query, orderBy,
-    deleteDoc, doc, serverTimestamp
+    getFirestore, collection, addDoc, getDocs, query, orderBy, where,
+    deleteDoc, doc, updateDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
     getStorage, ref, uploadBytes, getDownloadURL
@@ -46,6 +46,21 @@ function nl2br(str = "") {
     return escapeHTML(str).replace(/\n/g, "<br>");
 }
 
+/** 전화번호를 숫자만 남긴 정규화 형태로 (010-1234-5678 / 010 1234 5678 → 01012345678) */
+function normalizePhone(str = "") {
+    return String(str).replace(/[^0-9]/g, "");
+}
+
+/** 접수번호 생성: TH-YYYYMMDD-XXXX (4자리 랜덤) */
+function generateReceiptNumber() {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    const rand = String(Math.floor(1000 + Math.random() * 9000));
+    return `TH-${yyyy}${mm}${dd}-${rand}`;
+}
+
 /* ---------- Modal ---------- */
 function openModal(id) {
     const el = document.getElementById(id);
@@ -73,6 +88,7 @@ window.toggleModal = (id) => {
 /* ---------- Auth state ---------- */
 onAuthStateChanged(auth, (user) => {
     const authMenu     = $("#auth-menu");
+    const adminMenu    = $("#admin-menu");
     const adminSection = $("#admin-only-section");
     const isAdmin      = user && user.email === ADMIN_EMAIL;
 
@@ -81,6 +97,7 @@ onAuthStateChanged(auth, (user) => {
             ? `<a href="#" data-action="logout">Logout</a>`
             : `<a href="#" data-action="open-login">Login</a>`;
     }
+    if (adminMenu) adminMenu.hidden = !isAdmin;
     if (adminSection) adminSection.hidden = !isAdmin;
 
     loadCases();
@@ -114,12 +131,22 @@ if (consultForm) {
         btn.textContent = "접수 중";
 
         try {
+            const receiptNumber = generateReceiptNumber();
+            const phoneNormalized = normalizePhone(phone);
+
             await addDoc(collection(db, "consultations"), {
-                name, phone, email, type, message,
+                name, phone, phoneNormalized, email, type, message,
+                receiptNumber,
+                done: false,
                 timestamp: serverTimestamp()
             });
-            alert("상담 신청이 접수되었습니다.\n빠른 시일 내에 회신드리겠습니다.");
+
             consultForm.reset();
+
+            // 접수번호 안내 모달
+            const numEl = $("#receipt-number");
+            if (numEl) numEl.textContent = receiptNumber;
+            openModal("receipt-modal");
         } catch (err) {
             console.error(err);
             alert("접수 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
@@ -190,6 +217,212 @@ async function deleteCase(id) {
         console.error(err);
         alert("삭제에 실패했습니다.");
     }
+}
+
+/* ---------- Consultations (admin only) ---------- */
+function formatDate(ts) {
+    if (!ts) return "—";
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    if (isNaN(d.getTime())) return "—";
+    const yy = String(d.getFullYear()).slice(2);
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mi = String(d.getMinutes()).padStart(2, "0");
+    return `${yy}.${mm}.${dd} ${hh}:${mi}`;
+}
+
+async function loadConsultations() {
+    const list  = $("#consults-list");
+    const count = $("#consults-count");
+    if (!list) return;
+
+    if (!auth.currentUser || auth.currentUser.email !== ADMIN_EMAIL) {
+        list.innerHTML = `<div class="consults-empty">관리자만 조회할 수 있습니다.</div>`;
+        if (count) count.textContent = "0";
+        return;
+    }
+
+    list.innerHTML = `<div class="consults-empty">불러오는 중입니다.</div>`;
+
+    try {
+        const q = query(collection(db, "consultations"), orderBy("timestamp", "desc"));
+        const snap = await getDocs(q);
+
+        if (snap.empty) {
+            list.innerHTML = `<div class="consults-empty">접수된 상담이 없습니다.</div>`;
+            if (count) count.textContent = "0";
+            return;
+        }
+
+        if (count) count.textContent = snap.size;
+
+        const html = [];
+        snap.forEach((docSnap) => {
+            const d  = docSnap.data();
+            const id = docSnap.id;
+
+            const name    = escapeHTML(d.name    || "(이름 없음)");
+            const phone   = escapeHTML(d.phone   || "");
+            const email   = escapeHTML(d.email   || "");
+            const type    = escapeHTML(d.type    || "기타");
+            const message = escapeHTML(d.message || "");
+            const date    = escapeHTML(formatDate(d.timestamp));
+            const isDone  = !!d.done;
+
+            const phoneCell = phone
+                ? `<a href="tel:${phone.replace(/[^0-9+]/g, '')}">${phone}</a>`
+                : "—";
+            const emailCell = email
+                ? `<a href="mailto:${email}">${email}</a>`
+                : "—";
+
+            html.push(`
+                <div class="consult-item ${isDone ? 'is-done' : ''}" data-id="${escapeHTML(id)}">
+                    <div class="consult-summary" data-action="toggle-consult">
+                        <span class="consult-date">${date}</span>
+                        <span class="consult-name">${name}</span>
+                        <span class="consult-type">${type}</span>
+                        <span class="consult-toggle" aria-hidden="true">▾</span>
+                    </div>
+                    <div class="consult-detail">
+                        <dl class="consult-meta">
+                            <dt>연락처</dt><dd>${phoneCell}</dd>
+                            <dt>이메일</dt><dd>${emailCell}</dd>
+                        </dl>
+                        <div class="consult-message">${message}</div>
+                        <div class="consult-actions">
+                            <button class="btn-done ${isDone ? 'is-active' : ''}"
+                                    data-action="toggle-done" data-id="${escapeHTML(id)}">
+                                ${isDone ? '처리완료 취소' : '처리완료'}
+                            </button>
+                            <button class="btn-delete"
+                                    data-action="delete-consult" data-id="${escapeHTML(id)}">
+                                삭제
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `);
+        });
+
+        list.innerHTML = html.join("");
+    } catch (err) {
+        console.error(err);
+        list.innerHTML = `<div class="consults-empty">상담을 불러오는 데 실패했습니다.<br>${escapeHTML(err?.message || '')}</div>`;
+    }
+}
+
+async function toggleConsultDone(id, currentEl) {
+    if (!id) return;
+    const isCurrentlyDone = currentEl.classList.contains("is-active");
+    try {
+        await updateDoc(doc(db, "consultations", id), { done: !isCurrentlyDone });
+        await loadConsultations();
+    } catch (err) {
+        console.error(err);
+        alert("상태 변경에 실패했습니다.");
+    }
+}
+
+async function deleteConsult(id) {
+    if (!id) return;
+    if (!confirm("이 상담 내역을 삭제하시겠습니까?\n삭제 후에는 복구할 수 없습니다.")) return;
+    try {
+        await deleteDoc(doc(db, "consultations", id));
+        await loadConsultations();
+    } catch (err) {
+        console.error(err);
+        alert("삭제에 실패했습니다.");
+    }
+}
+
+/* ---------- My-lookup (신청자 본인 조회) ---------- */
+const mylookupForm = $("#mylookup-form");
+if (mylookupForm) {
+    mylookupForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const btn = mylookupForm.querySelector('button[type="submit"]');
+        const originalText = btn.textContent;
+        const resultBox = $("#mylookup-result");
+
+        const name  = $("#mylookup-name").value.trim();
+        const phone = normalizePhone($("#mylookup-phone").value);
+
+        if (!name || !phone) {
+            alert("성함과 연락처를 모두 입력해주세요.");
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = "조회 중";
+        if (resultBox) resultBox.innerHTML = "";
+
+        try {
+            const q = query(
+                collection(db, "consultations"),
+                where("name", "==", name),
+                where("phoneNormalized", "==", phone)
+            );
+            const snap = await getDocs(q);
+
+            if (!resultBox) return;
+
+            if (snap.empty) {
+                resultBox.innerHTML = `
+                    <div class="mylookup-message">
+                        일치하는 상담 내역이 없습니다.<br>
+                        성함과 연락처를 다시 확인해주세요.
+                    </div>`;
+                return;
+            }
+
+            // 최신순 정렬 (서버측 orderBy 안 씀 — 인덱스 불필요하도록)
+            const items = [];
+            snap.forEach(s => items.push({ id: s.id, ...s.data() }));
+            items.sort((a, b) => {
+                const ta = a.timestamp?.toMillis ? a.timestamp.toMillis() : 0;
+                const tb = b.timestamp?.toMillis ? b.timestamp.toMillis() : 0;
+                return tb - ta;
+            });
+
+            const html = items.map(d => {
+                const num    = escapeHTML(d.receiptNumber || "(번호 없음)");
+                const date   = escapeHTML(formatDate(d.timestamp));
+                const type   = escapeHTML(d.type || "기타");
+                const msg    = nl2br(d.message || "");
+                const isDone = !!d.done;
+                const status = isDone ? "처리 완료" : "접수됨";
+                const statusCls = isDone ? "is-done" : "";
+
+                return `
+                    <article class="mylookup-card">
+                        <header class="mylookup-card-head">
+                            <span class="mylookup-card-num">${num}</span>
+                            <span class="mylookup-card-date">${date}</span>
+                            <span class="mylookup-card-status ${statusCls}">${status}</span>
+                        </header>
+                        <p class="mylookup-card-type">상담 분야 — ${type}</p>
+                        <p class="mylookup-card-msg">${msg}</p>
+                    </article>
+                `;
+            }).join("");
+
+            resultBox.innerHTML = html;
+        } catch (err) {
+            console.error(err);
+            if (resultBox) {
+                resultBox.innerHTML = `
+                    <div class="mylookup-message">
+                        조회 중 오류가 발생했습니다.<br>
+                        ${escapeHTML(err?.message || '')}
+                    </div>`;
+            }
+        } finally {
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    });
 }
 
 /* ---------- Post ---------- */
@@ -278,6 +511,19 @@ document.addEventListener("click", async (e) => {
             e.preventDefault(); openModal("login-modal"); break;
         case "open-post":
             e.preventDefault(); openModal("post-modal"); break;
+        case "open-consults":
+            e.preventDefault();
+            openModal("consults-modal");
+            await loadConsultations();
+            break;
+        case "open-mylookup":
+            e.preventDefault();
+            openModal("mylookup-modal");
+            // 모달이 열릴 때 폼/결과 초기화
+            $("#mylookup-form")?.reset();
+            const r = $("#mylookup-result");
+            if (r) r.innerHTML = "";
+            break;
         case "close-modal": {
             e.preventDefault();
             const id = target.dataset.target;
@@ -292,6 +538,22 @@ document.addEventListener("click", async (e) => {
         case "delete-case":
             e.preventDefault();
             await deleteCase(target.dataset.id);
+            break;
+        case "toggle-consult": {
+            // 상담 항목 펼치기/접기 (요약 영역 어디든 클릭 시)
+            const item = target.closest(".consult-item");
+            if (item) item.classList.toggle("is-open");
+            break;
+        }
+        case "toggle-done":
+            e.preventDefault();
+            e.stopPropagation();
+            await toggleConsultDone(target.dataset.id, target);
+            break;
+        case "delete-consult":
+            e.preventDefault();
+            e.stopPropagation();
+            await deleteConsult(target.dataset.id);
             break;
     }
 });

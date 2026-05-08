@@ -23,6 +23,7 @@
                 <li><a href="#consultation">Consultation</a></li>
                 <li><a href="#cases">Cases</a></li>
                 <li><a href="#contact">Contact</a></li>
+                <li id="admin-menu" hidden><a href="#" data-action="open-consults">상담 조회</a></li>
                 <li id="auth-menu"><a href="#" data-action="open-login">Login</a></li>
             </ul>
             <button class="nav-toggle" aria-label="메뉴 열기">
@@ -143,6 +144,11 @@
                 </div>
 
                 <button type="submit" class="btn btn-primary">상담 접수</button>
+
+                <p class="form-aside">
+                    이미 상담을 신청하셨나요?
+                    <a href="#" data-action="open-mylookup">내 상담 조회 →</a>
+                </p>
             </form>
         </div>
     </section>
@@ -195,7 +201,7 @@
     <footer class="site-footer">
         <div class="container footer-inner">
             <div class="footer-logo">TANHA</div>
-            <p>&copy; 2025 TANHA LAW OFFICE. All Rights Reserved.</p>
+            <p>&copy; 2024 TANHA LAW OFFICE. All Rights Reserved.</p>
         </div>
     </footer>
 
@@ -238,6 +244,60 @@
                 </div>
                 <button type="submit" class="btn btn-primary">등록</button>
             </form>
+        </div>
+    </div>
+
+    <div id="consults-modal" class="modal" aria-hidden="true">
+        <div class="modal-backdrop" data-action="close-modal" data-target="consults-modal"></div>
+        <div class="modal-content modal-xl" role="dialog" aria-modal="true" aria-labelledby="consults-title">
+            <button class="modal-close" data-action="close-modal" data-target="consults-modal" aria-label="닫기">×</button>
+            <header class="modal-header">
+                <h3 id="consults-title" class="modal-title">접수된 상담 내역</h3>
+                <p class="modal-subtitle"><span id="consults-count">0</span>건</p>
+            </header>
+            <div id="consults-list" class="consults-list" aria-live="polite">
+                <div class="consults-empty">불러오는 중입니다.</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="receipt-modal" class="modal" aria-hidden="true">
+        <div class="modal-backdrop" data-action="close-modal" data-target="receipt-modal"></div>
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="receipt-title">
+            <button class="modal-close" data-action="close-modal" data-target="receipt-modal" aria-label="닫기">×</button>
+            <h3 id="receipt-title" class="modal-title">상담이 접수되었습니다</h3>
+            <p class="receipt-desc">빠른 시일 내에 회신드리겠습니다.<br>아래 접수번호를 보관해주세요.</p>
+            <div class="receipt-box">
+                <span class="receipt-label">접수번호</span>
+                <strong id="receipt-number" class="receipt-number">—</strong>
+            </div>
+            <p class="receipt-help">
+                이름과 연락처로 언제든 상담 진행 상황을 조회하실 수 있습니다.
+            </p>
+            <button type="button" class="btn btn-primary" data-action="close-modal" data-target="receipt-modal">확인</button>
+        </div>
+    </div>
+
+    <div id="mylookup-modal" class="modal" aria-hidden="true">
+        <div class="modal-backdrop" data-action="close-modal" data-target="mylookup-modal"></div>
+        <div class="modal-content modal-lg" role="dialog" aria-modal="true" aria-labelledby="mylookup-title">
+            <button class="modal-close" data-action="close-modal" data-target="mylookup-modal" aria-label="닫기">×</button>
+            <h3 id="mylookup-title" class="modal-title">내 상담 내역 조회</h3>
+            <p class="receipt-desc">신청 시 입력하신 이름과 연락처를 입력해주세요.</p>
+
+            <form id="mylookup-form" class="modal-form" novalidate>
+                <div class="field">
+                    <label for="mylookup-name">성함</label>
+                    <input type="text" id="mylookup-name" required>
+                </div>
+                <div class="field">
+                    <label for="mylookup-phone">연락처</label>
+                    <input type="tel" id="mylookup-phone" required placeholder="신청 시 입력하신 번호 그대로">
+                </div>
+                <button type="submit" class="btn btn-primary">조회</button>
+            </form>
+
+            <div id="mylookup-result" class="mylookup-result" aria-live="polite"></div>
         </div>
     </div>
 

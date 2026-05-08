@@ -568,6 +568,7 @@ input, textarea, select { font: inherit; color: inherit; }
     overflow-y: auto;
 }
 .modal-content.modal-lg { max-width: 720px; }
+.modal-content.modal-xl { max-width: 880px; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes modalIn {
     from { opacity: 0; transform: translateY(10px); }
@@ -599,6 +600,277 @@ input, textarea, select { font: inherit; color: inherit; }
 }
 
 body.modal-open { overflow: hidden; }
+
+/* ---------- Modal: header + subtitle ---------- */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--c-line);
+    gap: 20px;
+    flex-wrap: wrap;
+}
+.modal-header .modal-title { margin: 0; }
+.modal-subtitle {
+    font-family: var(--f-serif);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--c-muted);
+}
+.modal-subtitle span { font-style: normal; color: var(--c-ink); font-weight: 500; }
+
+/* ---------- Consultations list ---------- */
+.consults-list {
+    max-height: 60vh;
+    overflow-y: auto;
+    margin: 0 -8px;
+    padding: 0 8px;
+}
+.consults-empty {
+    text-align: center;
+    padding: 60px 0;
+    color: var(--c-muted);
+    font-size: 14px;
+}
+.consult-item {
+    border: 1px solid var(--c-line);
+    margin-bottom: -1px;
+    transition: background var(--t-fast);
+    background: var(--c-bg);
+}
+.consult-item:hover { background: var(--c-bg-alt); }
+.consult-item.is-done { opacity: 0.55; }
+.consult-item.is-done .consult-name { text-decoration: line-through; }
+
+.consult-summary {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    gap: 18px;
+    align-items: center;
+    padding: 18px 20px;
+    cursor: pointer;
+    user-select: none;
+}
+.consult-date {
+    font-family: var(--f-serif);
+    font-size: 13px;
+    color: var(--c-muted);
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+}
+.consult-name {
+    font-size: 15px;
+    color: var(--c-ink);
+    font-weight: 500;
+    letter-spacing: -0.005em;
+}
+.consult-type {
+    font-size: 12px;
+    color: var(--c-muted);
+    border: 1px solid var(--c-line-2);
+    padding: 3px 10px;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+}
+.consult-toggle {
+    color: var(--c-muted-2);
+    font-size: 14px;
+    transition: transform var(--t-fast), color var(--t-fast);
+    line-height: 1;
+}
+.consult-item.is-open .consult-toggle {
+    transform: rotate(180deg);
+    color: var(--c-ink);
+}
+.consult-detail {
+    display: none;
+    padding: 0 20px 24px;
+    border-top: 1px solid var(--c-line);
+}
+.consult-item.is-open .consult-detail { display: block; }
+
+.consult-meta {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 6px 20px;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--c-line);
+    font-size: 14px;
+}
+.consult-meta dt { color: var(--c-muted); font-size: 13px; }
+.consult-meta dd { color: var(--c-ink); }
+.consult-meta a {
+    border-bottom: 1px solid var(--c-line-2);
+    transition: border-color var(--t-fast);
+}
+.consult-meta a:hover { border-bottom-color: var(--c-ink); }
+
+.consult-message {
+    padding: 18px 0 20px;
+    font-size: 14.5px;
+    line-height: 1.85;
+    color: var(--c-ink-2);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.consult-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.consult-actions button {
+    font-size: 12px;
+    padding: 8px 14px;
+    border: 1px solid var(--c-line-2);
+    color: var(--c-muted);
+    background: transparent;
+    transition: all var(--t-fast);
+    letter-spacing: 0.01em;
+}
+.consult-actions button:hover {
+    color: var(--c-ink);
+    border-color: var(--c-ink);
+}
+.consult-actions .btn-done.is-active {
+    background: var(--c-ink);
+    color: #fff;
+    border-color: var(--c-ink);
+}
+.consult-actions .btn-delete:hover {
+    color: #b94c46;
+    border-color: #b94c46;
+}
+
+@media (max-width: 600px) {
+    .consult-summary {
+        grid-template-columns: 1fr auto;
+        gap: 8px 12px;
+        align-items: start;
+    }
+    .consult-date { grid-column: 1 / -1; order: -1; }
+    .consult-meta { grid-template-columns: 70px 1fr; gap: 4px 14px; }
+}
+
+/* ---------- "내 상담 조회" 진입점 ---------- */
+.form-aside {
+    margin-top: 24px;
+    text-align: center;
+    font-size: 13.5px;
+    color: var(--c-muted);
+}
+.form-aside a {
+    color: var(--c-ink);
+    border-bottom: 1px solid var(--c-line-2);
+    margin-left: 8px;
+    transition: border-color var(--t-fast);
+    padding-bottom: 1px;
+}
+.form-aside a:hover { border-bottom-color: var(--c-ink); }
+
+/* ---------- Receipt modal ---------- */
+.receipt-desc {
+    font-size: 14px;
+    color: var(--c-muted);
+    line-height: 1.7;
+    margin: -16px 0 24px;
+}
+.receipt-box {
+    border: 1px solid var(--c-line-2);
+    padding: 24px 28px;
+    margin-bottom: 20px;
+    text-align: center;
+    background: var(--c-bg-alt);
+}
+.receipt-label {
+    display: block;
+    font-family: var(--f-serif);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--c-muted);
+    margin-bottom: 8px;
+    letter-spacing: 0.04em;
+}
+.receipt-number {
+    font-family: var(--f-serif);
+    font-size: 26px;
+    font-weight: 500;
+    color: var(--c-ink);
+    letter-spacing: 0.06em;
+}
+.receipt-help {
+    font-size: 13px;
+    color: var(--c-muted);
+    line-height: 1.7;
+    margin-bottom: 28px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--c-line);
+}
+
+/* ---------- My-lookup result ---------- */
+.mylookup-result { margin-top: 32px; }
+.mylookup-result:empty { display: none; }
+.mylookup-message {
+    text-align: center;
+    padding: 32px 0;
+    color: var(--c-muted);
+    font-size: 14px;
+    border-top: 1px solid var(--c-line);
+}
+.mylookup-card {
+    border: 1px solid var(--c-line);
+    padding: 22px 24px;
+    margin-bottom: -1px;
+    background: var(--c-bg);
+}
+.mylookup-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--c-line);
+}
+.mylookup-card-num {
+    font-family: var(--f-serif);
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--c-ink);
+    letter-spacing: 0.04em;
+}
+.mylookup-card-date {
+    font-size: 13px;
+    color: var(--c-muted);
+}
+.mylookup-card-status {
+    display: inline-block;
+    font-size: 12px;
+    padding: 3px 10px;
+    border: 1px solid var(--c-line-2);
+    color: var(--c-muted);
+    letter-spacing: 0.02em;
+}
+.mylookup-card-status.is-done {
+    background: var(--c-ink);
+    color: #fff;
+    border-color: var(--c-ink);
+}
+.mylookup-card-type {
+    font-size: 13px;
+    color: var(--c-muted);
+    margin-bottom: 8px;
+}
+.mylookup-card-msg {
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--c-ink-2);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
 
 /* ---------- Reveal ---------- */
 .reveal {
