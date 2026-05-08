@@ -11,7 +11,7 @@ import {
     deleteDoc, doc, updateDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
-    getStorage, ref, uploadBytes, getDownloadURL
+    getStorage, ref, uploadBytes, getDownloadURL, deleteObject
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
 /* ---------- Firebase ---------- */
@@ -249,7 +249,6 @@ function formatCaseDate(ts) {
     if (!ts) return "";
     let d;
     if (typeof ts === "string") {
-        // YYYY-MM-DD 형식
         d = new Date(ts);
     } else if (ts.toDate) {
         d = ts.toDate();
@@ -264,8 +263,28 @@ function formatCaseDate(ts) {
 
 async function deleteCase(id) {
     if (!id) return;
-    if (!confirm("이 사례를 삭제하시겠습니까?")) return;
+    if (!confirm("이 사례를 삭제하시겠습니까? (서버의 원본 이미지도 함께 삭제됩니다)")) return;
     try {
+        // 1. 글 데이터를 불러와 첨부된 이미지 주소 확인
+        const docSnap = await getDoc(doc(db, "cases", id));
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            const images = data.images || [];
+            
+            // 2. Storage 원본 파일 삭제
+            for (const url of images) {
+                if(url.includes("firebasestorage")) {
+                    try {
+                        const fileRef = ref(storage, url);
+                        await deleteObject(fileRef);
+                    } catch (err) {
+                        console.warn("스토리지 이미지 삭제 실패 (이미 지워졌거나 권한 없음):", err);
+                    }
+                }
+            }
+        }
+        
+        // 3. Firestore 게시글 데이터 삭제
         await deleteDoc(doc(db, "cases", id));
         allCasesCache = null;  // 캐시 무효화
         await loadCases();
@@ -507,6 +526,7 @@ if (postForm) {
 
         try {
             const images = [];
+            // 파이어베이스 스토리지에 실제 파일 업로드
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
                 btn.textContent = `이미지 업로드 ${i + 1}/${files.length}`;
@@ -586,7 +606,6 @@ document.addEventListener("click", async (e) => {
         case "open-mylookup":
             e.preventDefault();
             openModal("mylookup-modal");
-            // 모달이 열릴 때 폼/결과 초기화
             $("#mylookup-form")?.reset();
             const r = $("#mylookup-result");
             if (r) r.innerHTML = "";
@@ -607,7 +626,6 @@ document.addEventListener("click", async (e) => {
             await deleteCase(target.dataset.id);
             break;
         case "toggle-consult": {
-            // 상담 항목 펼치기/접기 (요약 영역 어디든 클릭 시)
             const item = target.closest(".consult-item");
             if (item) item.classList.toggle("is-open");
             break;
@@ -712,7 +730,7 @@ if (casesFilter) {
 /* ---------- Case detail page (case.html) ---------- */
 async function loadCaseDetail() {
     const article = $("#case-article");
-    if (!article) return;  // case.html이 아니면 무시
+    if (!article) return;
 
     const params = new URLSearchParams(window.location.search);
     const id = params.get("id");
@@ -752,7 +770,6 @@ async function loadCaseDetail() {
 
         document.title = `${d.title || '성공 사례'} | 법률사무소 탄하`;
 
-        // 이미지 (배열 또는 단일 imageUrl 호환)
         let images = [];
         if (Array.isArray(d.images)) images = d.images;
         else if (d.imageUrl) images = [d.imageUrl];
@@ -798,17 +815,32 @@ async function loadCaseDetail() {
     }
 }
 
-// case.html에서 페이지 로드되면 상세 호출 — auth 상태에 따라 admin 버튼 다르게 표시되어야 하므로 onAuthStateChanged 안에서도 호출됨
 if ($("#case-article")) {
-    // auth 초기화 후 자동 호출되지만, 초기 진입 시 빠르게 표시되도록 한 번 더 호출
     loadCaseDetail();
 }
 
-// 상세 페이지의 사례 삭제 (목록과 다른 동작 — 삭제 후 목록으로 이동)
 async function deleteCaseFromDetail(id) {
     if (!id) return;
-    if (!confirm("이 사례를 삭제하시겠습니까?")) return;
+    if (!confirm("이 사례를 삭제하시겠습니까? (서버의 원본 이미지도 함께 삭제됩니다)")) return;
     try {
+        // Storage 원본 파일 삭제
+        const docSnap = await getDoc(doc(db, "cases", id));
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            const images = data.images || [];
+            for (const url of images) {
+                if(url.includes("firebasestorage")) {
+                    try {
+                        const fileRef = ref(storage, url);
+                        await deleteObject(fileRef);
+                    } catch (err) {
+                        console.warn("스토리지 이미지 삭제 실패:", err);
+                    }
+                }
+            }
+        }
+        
+        // Firestore 게시글 삭제
         await deleteDoc(doc(db, "cases", id));
         alert("삭제되었습니다.");
         window.location.href = "cases.html";
@@ -836,25 +868,21 @@ function closeLightbox() {
     document.body.classList.remove("modal-open");
 }
 
-// 라이트박스 액션 (delegation 내에서 처리)
 document.addEventListener("click", (e) => {
     const target = e.target;
 
-    // 이미지 클릭 시 라이트박스 열기
     if (target.matches?.('[data-action="open-lightbox"]')) {
         e.preventDefault();
         openLightbox(target.src);
         return;
     }
 
-    // 라이트박스 닫기 (배경 또는 닫기 버튼)
     if (target.matches?.('[data-action="close-lightbox"]') ||
         target.closest?.('[data-action="close-lightbox"]')) {
         closeLightbox();
         return;
     }
 
-    // 상세 페이지 삭제
     const detailDeleteBtn = target.closest?.('[data-action="delete-case-detail"]');
     if (detailDeleteBtn) {
         e.preventDefault();
@@ -862,7 +890,6 @@ document.addEventListener("click", (e) => {
     }
 });
 
-// ESC로 라이트박스도 닫기
 document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeLightbox();
 });
@@ -873,13 +900,11 @@ const videoBtn = $("#video-control-btn");
 if (videoElem && videoBtn) {
     videoBtn.addEventListener("click", () => {
         if (videoElem.paused) {
-            // Play 누를 때: 시간을 0초(처음)로 되돌리고, 재생하고, 까만 화면 해제
             videoElem.currentTime = 0;
             videoElem.play();
             videoElem.classList.remove("is-blacked-out");
             videoBtn.textContent = "Pause";
         } else {
-            // Pause 누를 때: 영상을 정지하고, 까만 화면 적용
             videoElem.pause();
             videoElem.classList.add("is-blacked-out");
             videoBtn.textContent = "Play";
