@@ -92,6 +92,7 @@ onAuthStateChanged(auth, (user) => {
     const authMenu     = $("#auth-menu");
     const adminMenu    = $("#admin-menu");
     const adminSection = $("#admin-only-section");
+    const adminSectionNotice = $("#admin-only-section-notice");
     const isAdmin      = user && user.email === ADMIN_EMAIL;
 
     if (authMenu) {
@@ -101,6 +102,7 @@ onAuthStateChanged(auth, (user) => {
     }
     if (adminMenu) adminMenu.hidden = !isAdmin;
     if (adminSection) adminSection.hidden = !isAdmin;
+    if (adminSectionNotice) adminSectionNotice.hidden = !isAdmin;
 
     // 페이지에 cases-list가 있으면 다시 로드 (관리자 권한 따라 삭제 버튼 표시 변동)
     if ($("#cases-list")) {
@@ -111,6 +113,17 @@ onAuthStateChanged(auth, (user) => {
     // 사례 상세 페이지면 다시 그리기 (관리자 삭제 버튼 표시)
     if ($("#case-article")) {
         loadCaseDetail();
+    }
+
+    // 소식 목록 페이지
+    if ($("#notices-list")) {
+        allNoticesCache = null;
+        loadNotices();
+    }
+
+    // 소식 상세 페이지
+    if ($("#notice-article")) {
+        loadNoticeDetail();
     }
 });
 
@@ -921,3 +934,333 @@ if (videoElem && videoBtn) {
         }
     });
 }
+
+/* =========================================================
+   Notices (탄하소식 / 법률소식)
+   - cases 로직을 평행 구조로 작성
+   ========================================================= */
+let allNoticesCache = null;
+let currentNoticeFilter = "all";
+
+async function loadNotices() {
+    const list = $("#notices-list");
+    if (!list) return;
+
+    const limit = parseInt(list.dataset.limit || "0", 10);
+
+    try {
+        if (!allNoticesCache) {
+            const q = query(collection(db, "notices"), orderBy("timestamp", "desc"));
+            const snap = await getDocs(q);
+            allNoticesCache = [];
+            snap.forEach(s => allNoticesCache.push({ id: s.id, ...s.data() }));
+        }
+
+        // 필터 적용
+        let items = allNoticesCache;
+        if (currentNoticeFilter !== "all") {
+            items = items.filter(d => (d.category || "탄하소식") === currentNoticeFilter);
+        }
+        if (limit > 0) items = items.slice(0, limit);
+
+        if (items.length === 0) {
+            list.innerHTML = `<div class="notices-empty">${
+                currentNoticeFilter === "all"
+                    ? "아직 등록된 소식이 없습니다."
+                    : "해당 분야의 소식이 없습니다."
+            }</div>`;
+            return;
+        }
+
+        const isAdmin = auth.currentUser && auth.currentUser.email === ADMIN_EMAIL;
+        const html = items.map(d => {
+            const id       = d.id;
+            const title    = escapeHTML(d.title || "(제목 없음)");
+            const category = escapeHTML(d.category || "탄하소식");
+            const summary  = escapeHTML(d.summary || (d.content ? d.content.slice(0, 100) : ""));
+            const date     = formatCaseDate(d.postDate || d.timestamp);
+
+            let firstImg = null;
+            if (Array.isArray(d.images) && d.images.length > 0) firstImg = d.images[0];
+            else if (d.imageUrl) firstImg = d.imageUrl;
+
+            const imgHtml = firstImg
+                ? `<img src="${escapeHTML(firstImg)}" alt="${title}" class="notice-img" loading="lazy">`
+                : `<div class="notice-no-img">No Image</div>`;
+
+            const delHtml = isAdmin
+                ? `<button class="delete-btn" data-action="delete-notice" data-id="${escapeHTML(id)}" type="button">삭제</button>`
+                : "";
+
+            return `
+                <a href="notice.html?id=${encodeURIComponent(id)}" class="notice-card">
+                    ${imgHtml}
+                    <div class="notice-body">
+                        <div class="notice-meta">
+                            <span class="notice-category">${category}</span>
+                            ${date ? `<span>${escapeHTML(date)}</span>` : ""}
+                        </div>
+                        <h3>${title}</h3>
+                        <p>${summary}</p>
+                        ${delHtml ? `<div class="notice-actions">${delHtml}</div>` : ""}
+                    </div>
+                </a>
+            `;
+        }).join("");
+
+        list.innerHTML = html;
+    } catch (err) {
+        console.error(err);
+        list.innerHTML = `<div class="notices-empty">소식을 불러오는 데 실패했습니다.</div>`;
+    }
+}
+
+async function deleteNotice(id) {
+    if (!id) return;
+    if (!confirm("이 소식을 삭제하시겠습니까? (서버의 원본 이미지도 함께 삭제됩니다)")) return;
+    try {
+        const docSnap = await getDoc(doc(db, "notices", id));
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            const images = data.images || [];
+            for (const url of images) {
+                if (url.includes("firebasestorage")) {
+                    try {
+                        const fileRef = ref(storage, url);
+                        await deleteObject(fileRef);
+                    } catch (err) {
+                        console.warn("스토리지 이미지 삭제 실패:", err);
+                    }
+                }
+            }
+        }
+        await deleteDoc(doc(db, "notices", id));
+        allNoticesCache = null;
+        await loadNotices();
+    } catch (err) {
+        console.error(err);
+        alert("삭제에 실패했습니다.");
+    }
+}
+
+/* ---------- Notices filter ---------- */
+const noticesFilter = $("#notices-filter");
+if (noticesFilter) {
+    noticesFilter.addEventListener("click", (e) => {
+        const btn = e.target.closest(".filter-btn");
+        if (!btn) return;
+        const filter = btn.dataset.filter;
+        if (!filter) return;
+
+        $$(".filter-btn", noticesFilter).forEach(b => b.classList.remove("is-active"));
+        btn.classList.add("is-active");
+        currentNoticeFilter = filter;
+        loadNotices();
+    });
+}
+
+/* ---------- Notice post (등록) ---------- */
+const noticePostForm = $("#notice-post-form");
+if (noticePostForm) {
+    noticePostForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const btn = noticePostForm.querySelector('button[type="submit"]');
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "업로드 중";
+
+        const files    = Array.from($("#notice-image")?.files || []);
+        const title    = $("#notice-title-input").value.trim();
+        const content  = $("#notice-content").value.trim();
+        const category = $("#notice-category")?.value || "탄하소식";
+        const summary  = $("#notice-summary")?.value.trim() || "";
+        const postDate = $("#notice-date")?.value || "";
+
+        if (!title || !content) {
+            alert("제목과 내용을 모두 입력해주세요.");
+            btn.disabled = false; btn.textContent = originalText;
+            return;
+        }
+
+        try {
+            const images = [];
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                btn.textContent = `이미지 업로드 ${i + 1}/${files.length}`;
+                const safeName = file.name.replace(/[^\w.\-]/g, "_");
+                const sRef = ref(storage, `notices/${Date.now()}_${i}_${safeName}`);
+                await uploadBytes(sRef, file);
+                const url = await getDownloadURL(sRef);
+                images.push(url);
+            }
+
+            btn.textContent = "저장 중";
+            await addDoc(collection(db, "notices"), {
+                title, content, summary, category, postDate,
+                images,
+                imageUrl: images[0] || null,
+                timestamp: serverTimestamp()
+            });
+
+            alert("소식이 등록되었습니다.");
+            noticePostForm.reset();
+            closeModal("notice-post-modal");
+            allNoticesCache = null;
+            await loadNotices();
+        } catch (err) {
+            console.error(err);
+            alert("등록에 실패했습니다: " + (err?.message || ""));
+        } finally {
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    });
+}
+
+/* ---------- Notice detail page ---------- */
+async function loadNoticeDetail() {
+    const article = $("#notice-article");
+    if (!article) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("id");
+
+    if (!id) {
+        article.innerHTML = `
+            <div class="container container-narrow">
+                <div class="notice-detail-error">
+                    잘못된 접근입니다.<br>
+                    <a href="notices.html" style="color:var(--c-ink); border-bottom:1px solid var(--c-ink); padding-bottom:1px;">소식 목록으로 돌아가기</a>
+                </div>
+            </div>`;
+        document.title = "소식을 찾을 수 없습니다 | 법률사무소 탄하";
+        return;
+    }
+
+    try {
+        const snap = await getDoc(doc(db, "notices", id));
+        if (!snap.exists()) {
+            article.innerHTML = `
+                <div class="container container-narrow">
+                    <div class="notice-detail-error">
+                        해당 소식을 찾을 수 없습니다.<br>
+                        <a href="notices.html" style="color:var(--c-ink); border-bottom:1px solid var(--c-ink); padding-bottom:1px;">소식 목록으로 돌아가기</a>
+                    </div>
+                </div>`;
+            document.title = "소식을 찾을 수 없습니다 | 법률사무소 탄하";
+            return;
+        }
+
+        const d = snap.data();
+        const title    = escapeHTML(d.title || "(제목 없음)");
+        const category = escapeHTML(d.category || "탄하소식");
+        const summary  = escapeHTML(d.summary || "");
+        const content  = escapeHTML(d.content || "");
+        const date     = formatCaseDate(d.postDate || d.timestamp);
+
+        document.title = `${d.title || '소식'} | 법률사무소 탄하`;
+
+        let images = [];
+        if (Array.isArray(d.images)) images = d.images;
+        else if (d.imageUrl) images = [d.imageUrl];
+
+        const imagesHtml = images.length > 0
+            ? `<div class="notice-detail-images">
+                  ${images.map(url => `<img src="${escapeHTML(url)}" alt="${title}" data-action="open-lightbox" loading="lazy">`).join("")}
+               </div>`
+            : "";
+
+        const isAdmin = auth.currentUser && auth.currentUser.email === ADMIN_EMAIL;
+        const adminHtml = isAdmin
+            ? `<div class="notice-detail-admin">
+                   <button class="delete-btn" data-action="delete-notice-detail" data-id="${escapeHTML(id)}" type="button">소식 삭제</button>
+               </div>`
+            : "";
+
+        article.innerHTML = `
+            <div class="container container-narrow">
+                <div class="notice-detail-back">
+                    <a href="notices.html">← 소식 목록</a>
+                </div>
+                <div class="notice-detail-meta">
+                    <span class="notice-category">${category}</span>
+                    ${date ? `<span>${escapeHTML(date)}</span>` : ""}
+                </div>
+                <h1 class="notice-detail-title">${title}</h1>
+                ${summary ? `<p class="notice-detail-summary">${summary}</p>` : ""}
+                ${imagesHtml}
+                <div class="notice-detail-content">${content}</div>
+                ${adminHtml}
+            </div>
+        `;
+    } catch (err) {
+        console.error(err);
+        article.innerHTML = `
+            <div class="container container-narrow">
+                <div class="notice-detail-error">
+                    소식을 불러오는 데 실패했습니다.<br>
+                    ${escapeHTML(err?.message || '')}
+                </div>
+            </div>`;
+    }
+}
+
+if ($("#notice-article")) {
+    loadNoticeDetail();
+}
+
+async function deleteNoticeFromDetail(id) {
+    if (!id) return;
+    if (!confirm("이 소식을 삭제하시겠습니까? (서버의 원본 이미지도 함께 삭제됩니다)")) return;
+    try {
+        const docSnap = await getDoc(doc(db, "notices", id));
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            const images = data.images || [];
+            for (const url of images) {
+                if (url.includes("firebasestorage")) {
+                    try {
+                        const fileRef = ref(storage, url);
+                        await deleteObject(fileRef);
+                    } catch (err) {
+                        console.warn("스토리지 이미지 삭제 실패:", err);
+                    }
+                }
+            }
+        }
+        await deleteDoc(doc(db, "notices", id));
+        alert("삭제되었습니다.");
+        window.location.href = "notices.html";
+    } catch (err) {
+        console.error(err);
+        alert("삭제에 실패했습니다.");
+    }
+}
+
+/* ---------- Notice click delegation (action 추가) ---------- */
+document.addEventListener("click", async (e) => {
+    const target = e.target.closest("[data-action]");
+    if (!target) return;
+    const action = target.dataset.action;
+
+    switch (action) {
+        case "open-notice-post":
+            e.preventDefault();
+            openModal("notice-post-modal");
+            break;
+        case "delete-notice":
+            e.preventDefault();
+            await deleteNotice(target.dataset.id);
+            break;
+        case "delete-notice-detail":
+            e.preventDefault();
+            await deleteNoticeFromDetail(target.dataset.id);
+            break;
+    }
+});
+
+/* ---------- Notice list reveal target ---------- */
+$$(".notices-grid").forEach(el => {
+    el.classList.add("reveal");
+    if (typeof io !== "undefined") io.observe(el);
+});
