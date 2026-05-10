@@ -25,6 +25,8 @@ const firebaseConfig = {
 };
 const ADMIN_EMAIL = "tanhalaw1@gmail.com";
 
+const MAIL_URL = "https://script.google.com/macros/s/AKfycbw_LmMmLvQv6MhD6438LLjRGV9MIo67A2a5789UeWTslD56Db7fE6_S3J5npHn2gV-q/exec";
+
 const app     = initializeApp(firebaseConfig);
 const auth    = getAuth(app);
 const db      = getFirestore(app);
@@ -149,6 +151,14 @@ if (consultForm) {
                 done: false,
                 timestamp: serverTimestamp()
             });
+
+           const formData = { name, phone, email, type, message };
+            await fetch(MAIL_URL, { 
+                method: "POST", 
+                body: JSON.stringify(formData), 
+                headers: { "Content-Type": "text/plain;charset=utf-8" } 
+            }).catch(err => console.log("이메일 알림 실패:", err));
+           
 
             consultForm.reset();
 
