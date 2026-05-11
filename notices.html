@@ -10,7 +10,7 @@
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500&family=Noto+Sans+KR:wght@600&family=Raleway:wght@400&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="style.css">
 </head>
@@ -18,7 +18,9 @@
 
     <header id="main-header" class="is-subpage">
         <nav class="navbar">
-            <a href="index.html" class="logo">TANHA</a>
+            <a href="index.html" class="logo" aria-label="법률사무소 탄하">
+                <img src="logo.png" alt="법률사무소 탄하 TANHA LAW OFFICE" class="logo-img">
+            </a>
             <ul class="nav-links">
                 <li><a href="index.html#about">Professionals</a></li>
                 <li><a href="index.html#consultation">Consultation</a></li>
@@ -45,12 +47,6 @@
 
         <section class="section">
             <div class="container">
-                <div class="cases-filter" id="notices-filter">
-                    <button class="filter-btn is-active" data-filter="all">전체</button>
-                    <button class="filter-btn" data-filter="탄하소식">탄하소식</button>
-                    <button class="filter-btn" data-filter="법률소식">법률소식</button>
-                </div>
-
                 <div id="notices-list" class="notices-grid" aria-live="polite">
                     <div class="notices-empty">불러오는 중입니다.</div>
                 </div>
@@ -64,14 +60,15 @@
 
     <footer class="site-footer">
         <div class="container footer-inner">
-            <div class="footer-logo">TANHA</div>
+            <a href="http://pf.kakao.com/_xbqhMn/chat" target="_blank" rel="noopener" class="footer-kakao">
+                <svg class="footer-kakao-icon" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+                    <path fill="#3C1E1E" d="M12 3C6.48 3 2 6.58 2 11c0 2.86 1.87 5.36 4.68 6.78L5.5 21.5l4.32-2.55c.7.1 1.43.15 2.18.15 5.52 0 10-3.58 10-8S17.52 3 12 3z"/>
+                </svg>
+                <span>카카오톡 상담</span>
+            </a>
             <div class="footer-meta">
                 <div class="footer-links">
                     <a href="privacy.html" class="is-strong">개인정보처리방침</a>
-                    <span class="footer-divider">|</span>
-                    <a href="notices.html">공지사항</a>
-                    <span class="footer-divider">|</span>
-                    <a href="cases.html">성공사례</a>
                 </div>
                 <p>&copy; 2025 TANHA LAW OFFICE. All Rights Reserved.</p>
             </div>
@@ -103,19 +100,12 @@
             <button class="modal-close" data-action="close-modal" data-target="notice-post-modal" aria-label="닫기">×</button>
             <h3 id="notice-post-title" class="modal-title">소식 등록</h3>
             <form id="notice-post-form" class="modal-form" novalidate>
-                <div class="form-grid">
-                    <div class="field">
-                        <label for="notice-category">분야</label>
-                        <select id="notice-category" required>
-                            <option value="탄하소식">탄하소식</option>
-                            <option value="법률소식">법률소식</option>
-                        </select>
-                    </div>
-                    <div class="field">
-                        <label for="notice-date">게시 일자 (선택)</label>
-                        <input type="date" id="notice-date">
-                    </div>
+                <div class="field">
+                    <label for="notice-date">게시 일자 (선택)</label>
+                    <input type="date" id="notice-date">
                 </div>
+                <!-- 카테고리 탭이 제거되어 기본값으로 처리 -->
+                <input type="hidden" id="notice-category" value="소식">
                 <div class="field">
                     <label for="notice-title-input">제목</label>
                     <input type="text" id="notice-title-input" required placeholder="예) 2025년 신규 변호사 영입 안내">

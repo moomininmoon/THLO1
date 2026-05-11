@@ -10,7 +10,7 @@
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500&family=Noto+Sans+KR:wght@600&family=Raleway:wght@400&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="style.css">
 </head>
@@ -18,7 +18,9 @@
 
     <header id="main-header">
         <nav class="navbar">
-            <a href="#top" class="logo">TANHA</a>
+            <a href="#top" class="logo" aria-label="법률사무소 탄하">
+                <img src="logo.png" alt="법률사무소 탄하 TANHA LAW OFFICE" class="logo-img">
+            </a>
             <ul class="nav-links">
                 <li><a href="#about">Professionals</a></li>
                 <li><a href="#consultation">Consultation</a></li>
@@ -58,6 +60,9 @@
 
             <div class="profile">
                 <div class="profile-intro">
+                    <div class="profile-photo">
+                        <img src="bang-sowoon.png" alt="대표변호사 방소운">
+                    </div>
                     <p class="profile-role">대표변호사 / Attorney at Law</p>
                     <h3 class="profile-name">방소운</h3>
                     <p class="profile-name-en">Bang So-Woon</p>
@@ -125,11 +130,10 @@
                     <div class="field">
                         <label for="consult-type">상담 분야</label>
                         <select id="consult-type" required>
-                            <option value="민사사건">민사사건</option>
-                            <option value="형사사건">형사사건</option>
-                            <option value="이혼 및 가사">이혼 및 가사</option>
-                            <option value="성범죄">성범죄</option>
-                            <option value="청소년">청소년</option>
+                            <option value="민사">민사</option>
+                            <option value="형사">형사</option>
+                            <option value="가사">가사</option>
+                            <option value="행정">행정</option>
                             <option value="기타">기타</option>
                         </select>
                     </div>
@@ -196,12 +200,20 @@
                     <dd><a href="tel:070-8211-1222">070-8211-1222</a></dd>
                 </div>
                 <div class="contact-row">
+                    <dt>팩스</dt>
+                    <dd>0503-8379-3712</dd>
+                </div>
+                <div class="contact-row">
+                    <dt>이메일</dt>
+                    <dd><a href="mailto:tanhalawoffice@gmail.com">tanhalawoffice@gmail.com</a></dd>
+                </div>
+                <div class="contact-row">
                     <dt>업무시간</dt>
                     <dd>평일 09:00 – 18:00 (점심 12:00 – 13:00)</dd>
                 </div>
                 <div class="contact-row">
                     <dt>주차</dt>
-                    <dd>온누리법조타워 지하 주차장 무료 이용</dd>
+                    <dd>온누리법조타워 지하 주차장 무료 이용<br>만성지구 제7공영주차장</dd>
                 </div>
             </dl>
 
@@ -225,7 +237,7 @@
                         구글 지도 <em>Google</em>
                     </a>
                     <a class="map-link" href="https://tmap.life/355c0adc" target="_blank" rel="noopener">
-                        길찾기 <em>T map (Only mobile)</em>
+                        길찾기 <em>T map (Mobile only)</em>
                     </a>
                 </div>
             </div>
@@ -234,7 +246,12 @@
 
     <footer class="site-footer">
         <div class="container footer-inner">
-            <div class="footer-logo">TANHA</div>
+            <a href="http://pf.kakao.com/_xbqhMn/chat" target="_blank" rel="noopener" class="footer-kakao">
+                <svg class="footer-kakao-icon" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+                    <path fill="#3C1E1E" d="M12 3C6.48 3 2 6.58 2 11c0 2.86 1.87 5.36 4.68 6.78L5.5 21.5l4.32-2.55c.7.1 1.43.15 2.18.15 5.52 0 10-3.58 10-8S17.52 3 12 3z"/>
+                </svg>
+                <span>카카오톡 상담</span>
+            </a>
             <div class="footer-meta">
                 <div class="footer-links">
                     <a href="privacy.html" class="is-strong">개인정보처리방침</a>

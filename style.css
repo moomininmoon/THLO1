@@ -16,6 +16,8 @@
 
     --f-sans:  'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
     --f-serif: 'EB Garamond', 'Pretendard', serif;
+    --f-logo-ko: 'Noto Sans KR', 'Pretendard', sans-serif;
+    --f-logo-en: 'Raleway', 'EB Garamond', sans-serif;
 
     --container: 1180px;
     --header-h:  76px;
@@ -158,12 +160,30 @@ body.page-subpage { padding-top: 0; }
     margin: 0 auto;
 }
 .logo {
+    display: inline-flex;
+    align-items: center;
     font-family: var(--f-serif);
     font-size: 22px;
     font-weight: 500;
     letter-spacing: 0.24em;
     color: #fff;
     transition: color var(--t-base);
+}
+.logo-img {
+    display: block;
+    height: 44px;
+    width: auto;
+    /* Hero 영상 위(어두운 배경)에서 또렷이 보이도록 흰색 글로우 효과 */
+    filter:
+        drop-shadow(0 0 1px rgba(255, 255, 255, 0.95))
+        drop-shadow(0 0 3px rgba(255, 255, 255, 0.85))
+        drop-shadow(0 0 6px rgba(255, 255, 255, 0.6));
+    transition: filter var(--t-base);
+}
+/* 스크롤 후 / 서브페이지에서는 흰 배경이므로 글로우 제거 (원본 그대로) */
+#main-header.scrolled .logo-img,
+#main-header.is-subpage .logo-img {
+    filter: none;
 }
 #main-header.scrolled .logo { color: var(--c-ink); }
 .nav-links {
@@ -279,6 +299,24 @@ body.page-subpage { padding-top: 0; }
     top: 120px;
     border-top: 1px solid var(--c-ink);
     padding-top: 24px;
+}
+.profile-photo {
+    margin-bottom: 28px;
+    overflow: hidden;
+    background: var(--c-bg-alt);
+    aspect-ratio: 3 / 4;
+}
+.profile-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    filter: grayscale(8%);
+    transition: filter var(--t-base), transform var(--t-base);
+}
+.profile-photo:hover img {
+    filter: none;
+    transform: scale(1.02);
 }
 .profile-role {
     font-size: 13px;
@@ -809,6 +847,29 @@ body.page-subpage { padding-top: 0; }
     color: var(--c-ink);
     font-weight: 500;
 }
+.footer-kakao {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 22px;
+    background: #FEE500;
+    color: #3C1E1E;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    border-radius: 999px;
+    transition: transform var(--t-fast), box-shadow var(--t-fast), background var(--t-fast);
+    box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+}
+.footer-kakao:hover {
+    background: #FDD835;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(254, 229, 0, 0.4);
+}
+.footer-kakao:active { transform: translateY(0); }
+.footer-kakao-icon {
+    flex-shrink: 0;
+}
 .site-footer p {
     font-size: 12.5px;
     color: var(--c-muted);
@@ -1163,6 +1224,10 @@ body.modal-open { overflow: hidden; }
         gap: 56px;
     }
     .profile-intro { position: static; }
+    .profile-photo {
+        max-width: 280px;
+        margin-left: 0;
+    }
 }
 
 @media (max-width: 768px) {
@@ -1219,7 +1284,10 @@ body.modal-open { overflow: hidden; }
     }
 
     .modal-content { padding: 48px 28px 32px; }
-    .footer-inner { flex-direction: column; text-align: center; }
+    .footer-inner { flex-direction: column; text-align: center; gap: 24px; }
+
+    .logo-img { height: 36px; }
+    .footer-kakao { padding: 11px 20px; font-size: 13.5px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
