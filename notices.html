@@ -18,19 +18,19 @@
 
     <header id="main-header" class="is-subpage">
         <nav class="navbar">
-            <a href="index.html" class="logo" aria-label="법률사무소 탄하">
+            <a href="index.html" class="logo" aria-label="TANHA LAW OFFICE">
                 <img src="logo.png" alt="법률사무소 탄하 TANHA LAW OFFICE" class="logo-img">
             </a>
             <ul class="nav-links">
-                <li><a href="index.html#about">Professionals</a></li>
-                <li><a href="index.html#consultation">Consultation</a></li>
-                <li><a href="cases.html">Cases</a></li>
-                <li><a href="notices.html" class="is-current">Notice</a></li>
-                <li><a href="index.html#contact">Contact</a></li>
-                <li id="admin-menu" hidden><a href="#" data-action="open-consults">상담 조회</a></li>
-                <li id="auth-menu"><a href="#" data-action="open-login">Login</a></li>
+                <li><a href="index.html#about" data-i18n="nav.professionals">Professionals</a></li>
+                <li><a href="index.html#consultation" data-i18n="nav.consultation">Consultation</a></li>
+                <li><a href="cases.html" data-i18n="nav.cases">Cases</a></li>
+                <li><a href="notices.html" class="is-current" data-i18n="nav.notice">Notice</a></li>
+                <li><a href="index.html#contact" data-i18n="nav.contact">Contact</a></li>
+                <li id="admin-menu" hidden><a href="#" data-action="open-consults" data-i18n="nav.consults_admin">상담 조회</a></li>
+                <li id="auth-menu"><a href="#" data-action="open-login" data-i18n="nav.login">Login</a></li>
             </ul>
-            <button class="nav-toggle" aria-label="메뉴 열기">
+            <button class="nav-toggle" data-i18n-attr="aria-label:nav.menu_open" aria-label="메뉴 열기">
                 <span></span><span></span>
             </button>
         </nav>
@@ -39,20 +39,20 @@
     <main class="subpage-main">
         <header class="subpage-hero">
             <div class="container">
-                <span class="eyebrow">Notice</span>
-                <h1 class="subpage-title">소식</h1>
-                <p class="subpage-desc">법률사무소 탄하의 새로운 소식과 법률 동향을 전해드립니다.</p>
+                <span class="eyebrow" data-i18n="notice.eyebrow">Notice</span>
+                <h1 class="subpage-title" data-i18n="notice.title">소식</h1>
+                <p class="subpage-desc" data-i18n="notice.subdesc">법률사무소 탄하의 새로운 소식과 법률 동향을 전해드립니다.</p>
             </div>
         </header>
 
         <section class="section">
             <div class="container">
                 <div id="notices-list" class="notices-grid" aria-live="polite">
-                    <div class="notices-empty">불러오는 중입니다.</div>
+                    <div class="notices-empty" data-i18n="common.loading">불러오는 중입니다.</div>
                 </div>
 
                 <div class="admin-controls" id="admin-only-section-notice" hidden>
-                    <button class="btn btn-outline" data-action="open-notice-post">새 소식 등록</button>
+                    <button class="btn btn-outline" data-action="open-notice-post" data-i18n="notice.newpost">새 소식 등록</button>
                 </div>
             </div>
         </section>
@@ -64,13 +64,13 @@
                 <svg class="footer-kakao-icon" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
                     <path fill="#3C1E1E" d="M12 3C6.48 3 2 6.58 2 11c0 2.86 1.87 5.36 4.68 6.78L5.5 21.5l4.32-2.55c.7.1 1.43.15 2.18.15 5.52 0 10-3.58 10-8S17.52 3 12 3z"/>
                 </svg>
-                <span>카카오톡 상담</span>
+                <span data-i18n="ft.kakao">카카오톡 상담</span>
             </a>
             <div class="footer-meta">
                 <div class="footer-links">
-                    <a href="privacy.html" class="is-strong">개인정보처리방침</a>
+                    <a href="privacy.html" class="is-strong" data-i18n="ft.privacy">개인정보처리방침</a>
                 </div>
-                <p>&copy; 2025 TANHA LAW OFFICE. All Rights Reserved.</p>
+                <p data-i18n="ft.copy">&copy; 2025 TANHA LAW OFFICE. All Rights Reserved.</p>
             </div>
         </div>
     </footer>
@@ -78,18 +78,18 @@
     <div id="login-modal" class="modal" aria-hidden="true">
         <div class="modal-backdrop" data-action="close-modal" data-target="login-modal"></div>
         <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="login-title">
-            <button class="modal-close" data-action="close-modal" data-target="login-modal" aria-label="닫기">×</button>
-            <h3 id="login-title" class="modal-title">관리자 로그인</h3>
+            <button class="modal-close" data-action="close-modal" data-target="login-modal" data-i18n-attr="aria-label:common.close" aria-label="닫기">×</button>
+            <h3 id="login-title" class="modal-title" data-i18n="login.title">관리자 로그인</h3>
             <form id="auth-form" class="modal-form" novalidate>
                 <div class="field">
-                    <label for="auth-email">이메일</label>
+                    <label for="auth-email" data-i18n="login.email">이메일</label>
                     <input type="email" id="auth-email" required>
                 </div>
                 <div class="field">
-                    <label for="auth-password">비밀번호</label>
+                    <label for="auth-password" data-i18n="login.password">비밀번호</label>
                     <input type="password" id="auth-password" required>
                 </div>
-                <button type="submit" class="btn btn-primary">로그인</button>
+                <button type="submit" class="btn btn-primary" data-i18n="login.submit">로그인</button>
             </form>
         </div>
     </div>
@@ -97,32 +97,32 @@
     <div id="notice-post-modal" class="modal" aria-hidden="true">
         <div class="modal-backdrop" data-action="close-modal" data-target="notice-post-modal"></div>
         <div class="modal-content modal-lg" role="dialog" aria-modal="true" aria-labelledby="notice-post-title">
-            <button class="modal-close" data-action="close-modal" data-target="notice-post-modal" aria-label="닫기">×</button>
-            <h3 id="notice-post-title" class="modal-title">소식 등록</h3>
+            <button class="modal-close" data-action="close-modal" data-target="notice-post-modal" data-i18n-attr="aria-label:common.close" aria-label="닫기">×</button>
+            <h3 id="notice-post-title" class="modal-title" data-i18n="notice.post_title">소식 등록</h3>
             <form id="notice-post-form" class="modal-form" novalidate>
                 <div class="field">
-                    <label for="notice-date">게시 일자 (선택)</label>
+                    <label for="notice-date" data-i18n="notice.post_date_lbl">게시 일자 (선택)</label>
                     <input type="date" id="notice-date">
                 </div>
                 <!-- 카테고리 탭이 제거되어 기본값으로 처리 -->
                 <input type="hidden" id="notice-category" value="소식">
                 <div class="field">
-                    <label for="notice-title-input">제목</label>
-                    <input type="text" id="notice-title-input" required placeholder="예) 2025년 신규 변호사 영입 안내">
+                    <label for="notice-title-input" data-i18n="post.title_lbl">제목</label>
+                    <input type="text" id="notice-title-input" required data-i18n-attr="placeholder:notice.post_title_ph" placeholder="예) 2025년 신규 변호사 영입 안내">
                 </div>
                 <div class="field">
-                    <label for="notice-summary">요약 <em>(목록에 표시될 한 줄 설명)</em></label>
-                    <input type="text" id="notice-summary" placeholder="짧게 요약해주세요">
+                    <label for="notice-summary"><span data-i18n="post.summary_lbl">요약</span> <em data-i18n="post.summary_sub">(목록에 표시될 한 줄 설명)</em></label>
+                    <input type="text" id="notice-summary" data-i18n-attr="placeholder:post.summary_ph" placeholder="짧게 요약해주세요">
                 </div>
                 <div class="field">
-                    <label for="notice-content">상세 내용</label>
-                    <textarea id="notice-content" required placeholder="본문 내용을 자세히 기재해주세요."></textarea>
+                    <label for="notice-content" data-i18n="post.content_lbl">상세 내용</label>
+                    <textarea id="notice-content" required data-i18n-attr="placeholder:notice.post_content_ph" placeholder="본문 내용을 자세히 기재해주세요."></textarea>
                 </div>
                 <div class="field">
-                    <label for="notice-image">이미지 첨부 <em>(여러 장 선택 가능)</em></label>
+                    <label for="notice-image"><span data-i18n="post.image_lbl">이미지 첨부</span> <em data-i18n="post.image_sub">(여러 장 선택 가능)</em></label>
                     <input type="file" id="notice-image" accept="image/*" multiple>
                 </div>
-                <button type="submit" class="btn btn-primary">등록</button>
+                <button type="submit" class="btn btn-primary" data-i18n="common.submit">등록</button>
             </form>
         </div>
     </div>
@@ -130,13 +130,13 @@
     <div id="consults-modal" class="modal" aria-hidden="true">
         <div class="modal-backdrop" data-action="close-modal" data-target="consults-modal"></div>
         <div class="modal-content modal-xl" role="dialog" aria-modal="true" aria-labelledby="consults-title">
-            <button class="modal-close" data-action="close-modal" data-target="consults-modal" aria-label="닫기">×</button>
+            <button class="modal-close" data-action="close-modal" data-target="consults-modal" data-i18n-attr="aria-label:common.close" aria-label="닫기">×</button>
             <header class="modal-header">
-                <h3 id="consults-title" class="modal-title">접수된 상담 내역</h3>
-                <p class="modal-subtitle"><span id="consults-count">0</span>건</p>
+                <h3 id="consults-title" class="modal-title" data-i18n="cm.title">접수된 상담 내역</h3>
+                <p class="modal-subtitle"><span id="consults-count">0</span><span data-i18n="cm.count_unit">건</span></p>
             </header>
             <div id="consults-list" class="consults-list" aria-live="polite">
-                <div class="consults-empty">불러오는 중입니다.</div>
+                <div class="consults-empty" data-i18n="common.loading">불러오는 중입니다.</div>
             </div>
         </div>
     </div>

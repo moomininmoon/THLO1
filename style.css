@@ -1747,3 +1747,136 @@ body.modal-open { overflow: hidden; }
     .privacy-table th, .privacy-table td { padding: 10px; }
 }
 
+
+/* =========================================================
+   i18n — 언어 전환 스위처 (Header 메뉴 안)
+   ========================================================= */
+.lang-switch-wrap {
+    /* 데스크탑: 다른 메뉴 항목들과 같은 줄에 위치 */
+    display: flex;
+    align-items: center;
+}
+.lang-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--f-sans, inherit);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    line-height: 1;
+}
+.lang-label {
+    display: none; /* 데스크탑에서는 라벨 숨김 (메뉴 공간 절약) */
+}
+.lang-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 2px;
+    color: inherit;
+    font: inherit;
+    opacity: 0.55;
+    transition: opacity var(--t-fast, 0.2s);
+    letter-spacing: 0.06em;
+    font-weight: 400;
+}
+.lang-btn:hover { opacity: 0.92; }
+.lang-btn.is-active {
+    opacity: 1;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
+.lang-divider {
+    opacity: 0.35;
+    user-select: none;
+}
+
+/* Hero 위(어두운 배경)에서 흰색, 스크롤 후/서브페이지에서는 검정 */
+.nav-links .lang-btn { color: rgba(255, 255, 255, 0.88); }
+#main-header.scrolled .nav-links .lang-btn,
+#main-header.is-subpage .nav-links .lang-btn { color: var(--c-ink-2); }
+#main-header.scrolled .nav-links .lang-btn.is-active,
+#main-header.is-subpage .nav-links .lang-btn.is-active { color: var(--c-ink); }
+
+/* 모바일 (768 이하) — 슬라이드-인 패널 안에서는 행 안에 배치 + 라벨 보임 */
+@media (max-width: 768px) {
+    .lang-switch-wrap {
+        margin-top: 12px;
+        padding-top: 20px;
+        border-top: 1px solid var(--c-line, rgba(0,0,0,0.1));
+        width: 100%;
+    }
+    .lang-switch {
+        font-size: 14px;
+        gap: 10px;
+    }
+    .lang-label {
+        display: inline;
+        opacity: 0.5;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-right: 6px;
+    }
+    .lang-btn { padding: 6px 4px; }
+    .nav-links .lang-btn,
+    #main-header.scrolled .nav-links .lang-btn {
+        color: var(--c-ink, #111);
+    }
+}
+
+/* =========================================================
+   자동번역 버튼 (case/notice 상세 — 영문 모드)
+   ========================================================= */
+.auto-translate-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+    margin: 28px 0;
+    padding: 18px 22px;
+    background: var(--c-bg-alt, #f7f5f1);
+    border-left: 3px solid var(--c-ink, #111);
+}
+.btn-translate {
+    background: var(--c-ink, #111);
+    color: #fff;
+    border: none;
+    padding: 9px 18px;
+    cursor: pointer;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    border-radius: 2px;
+    font-family: inherit;
+    transition: opacity var(--t-fast, 0.2s);
+}
+.btn-translate:hover { opacity: 0.85; }
+.btn-translate:disabled { opacity: 0.5; cursor: wait; }
+.auto-translate-note {
+    font-size: 12px;
+    opacity: 0.55;
+    line-height: 1.5;
+}
+
+/* =========================================================
+   Privacy — 영문 모드 안내 배너
+   ========================================================= */
+.privacy-lang-notice {
+    margin: 0 0 32px;
+    padding: 16px 22px;
+    background: #fff8e6;
+    border-left: 3px solid #d4a017;
+    border-radius: 2px;
+    color: #5a4a1a;
+    font-size: 14px;
+    line-height: 1.65;
+}
+.privacy-lang-notice:empty {
+    display: none;
+}
+.privacy-lang-notice a {
+    color: #5a4a1a;
+    border-bottom: 1px solid #5a4a1a;
+    padding-bottom: 1px;
+}

@@ -18,19 +18,19 @@
 
     <header id="main-header" class="is-subpage">
         <nav class="navbar">
-            <a href="index.html" class="logo" aria-label="법률사무소 탄하">
+            <a href="index.html" class="logo" aria-label="TANHA LAW OFFICE">
                 <img src="logo.png" alt="법률사무소 탄하 TANHA LAW OFFICE" class="logo-img">
             </a>
             <ul class="nav-links">
-                <li><a href="index.html#about">Professionals</a></li>
-                <li><a href="index.html#consultation">Consultation</a></li>
-                <li><a href="cases.html">Cases</a></li>
-                <li><a href="notices.html">Notice</a></li>
-                <li><a href="index.html#contact">Contact</a></li>
-                <li id="admin-menu" hidden><a href="#" data-action="open-consults">상담 조회</a></li>
-                <li id="auth-menu"><a href="#" data-action="open-login">Login</a></li>
+                <li><a href="index.html#about" data-i18n="nav.professionals">Professionals</a></li>
+                <li><a href="index.html#consultation" data-i18n="nav.consultation">Consultation</a></li>
+                <li><a href="cases.html" data-i18n="nav.cases">Cases</a></li>
+                <li><a href="notices.html" data-i18n="nav.notice">Notice</a></li>
+                <li><a href="index.html#contact" data-i18n="nav.contact">Contact</a></li>
+                <li id="admin-menu" hidden><a href="#" data-action="open-consults" data-i18n="nav.consults_admin">상담 조회</a></li>
+                <li id="auth-menu"><a href="#" data-action="open-login" data-i18n="nav.login">Login</a></li>
             </ul>
-            <button class="nav-toggle" aria-label="메뉴 열기">
+            <button class="nav-toggle" data-i18n-attr="aria-label:nav.menu_open" aria-label="메뉴 열기">
                 <span></span><span></span>
             </button>
         </nav>
@@ -46,6 +46,8 @@
         </header>
 
         <article class="container container-narrow privacy-article">
+
+            <p class="privacy-lang-notice" data-i18n="ft.privacy_note" data-i18n-html></p>
 
             <nav class="privacy-toc" aria-label="목차">
                 <h2>Contents</h2>
@@ -309,13 +311,13 @@
                 <svg class="footer-kakao-icon" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
                     <path fill="#3C1E1E" d="M12 3C6.48 3 2 6.58 2 11c0 2.86 1.87 5.36 4.68 6.78L5.5 21.5l4.32-2.55c.7.1 1.43.15 2.18.15 5.52 0 10-3.58 10-8S17.52 3 12 3z"/>
                 </svg>
-                <span>카카오톡 상담</span>
+                <span data-i18n="ft.kakao">카카오톡 상담</span>
             </a>
             <div class="footer-meta">
                 <div class="footer-links">
-                    <a href="privacy.html" class="is-strong">개인정보처리방침</a>
+                    <a href="privacy.html" class="is-strong" data-i18n="ft.privacy">개인정보처리방침</a>
                 </div>
-                <p>&copy; 2025 TANHA LAW OFFICE. All Rights Reserved.</p>
+                <p data-i18n="ft.copy">&copy; 2025 TANHA LAW OFFICE. All Rights Reserved.</p>
             </div>
         </div>
     </footer>
@@ -323,18 +325,18 @@
     <div id="login-modal" class="modal" aria-hidden="true">
         <div class="modal-backdrop" data-action="close-modal" data-target="login-modal"></div>
         <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="login-title">
-            <button class="modal-close" data-action="close-modal" data-target="login-modal" aria-label="닫기">×</button>
-            <h3 id="login-title" class="modal-title">관리자 로그인</h3>
+            <button class="modal-close" data-action="close-modal" data-target="login-modal" data-i18n-attr="aria-label:common.close" aria-label="닫기">×</button>
+            <h3 id="login-title" class="modal-title" data-i18n="login.title">관리자 로그인</h3>
             <form id="auth-form" class="modal-form" novalidate>
                 <div class="field">
-                    <label for="auth-email">이메일</label>
+                    <label for="auth-email" data-i18n="login.email">이메일</label>
                     <input type="email" id="auth-email" required>
                 </div>
                 <div class="field">
-                    <label for="auth-password">비밀번호</label>
+                    <label for="auth-password" data-i18n="login.password">비밀번호</label>
                     <input type="password" id="auth-password" required>
                 </div>
-                <button type="submit" class="btn btn-primary">로그인</button>
+                <button type="submit" class="btn btn-primary" data-i18n="login.submit">로그인</button>
             </form>
         </div>
     </div>
