@@ -20,7 +20,7 @@ import {
 const I18N = {
     ko: {
         /* ----- 메뉴/공통 ----- */
-        "nav.professionals": "구성원",
+        "nav.professionals": "소개",
         "nav.consultation": "상담 문의",
         "nav.cases": "성공 사례",
         "nav.notice": "소식",
