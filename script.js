@@ -8,7 +8,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import {
     getFirestore, collection, addDoc, getDoc, getDocs, query, orderBy, where,
-    deleteDoc, doc, updateDoc, setDoc, serverTimestamp
+    deleteDoc, doc, updateDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import {
     getStorage, ref, uploadBytes, getDownloadURL, deleteObject
@@ -200,10 +200,6 @@ const I18N = {
         "login.loading": "로그인 중",
         "login.fail": "로그인에 실패했습니다.",
         "login.logout_done": "로그아웃 되었습니다.",
-        "login.locked": "로그인 시도가 5회 초과되어 일시적으로 차단되었습니다. {min}분 후 다시 시도해주세요.",
-        "login.remaining": "남은 시도 횟수: {n}회",
-        "login.bot_blocked": "비정상적인 접근이 감지되었습니다.",
-        "login.email_invalid": "올바른 이메일 형식을 입력해주세요.",
 
         /* ----- Receipt modal ----- */
         "rc.title": "상담이 접수되었습니다",
@@ -431,10 +427,6 @@ const I18N = {
         "login.loading": "Logging in…",
         "login.fail": "Login failed.",
         "login.logout_done": "You have been logged out.",
-        "login.locked": "Too many failed attempts. Please try again in {min} minutes.",
-        "login.remaining": "Remaining attempts: {n}",
-        "login.bot_blocked": "Abnormal activity detected.",
-        "login.email_invalid": "Please enter a valid email address.",
 
         /* ----- Receipt ----- */
         "rc.title": "Your request has been received",
@@ -729,231 +721,6 @@ const auth    = getAuth(app);
 const db      = getFirestore(app);
 const storage = getStorage(app);
 
-/* =========================================================
-   SECURITY MODULE — Brute-force 방어 / 관리자 검증 / 봇 차단
-   ========================================================= */
-
-const SEC = {
-    MAX_ATTEMPTS: 5,
-    LOCK_MINUTES: 15,
-    LOCK_MS: 15 * 60 * 1000,
-    // 클라이언트 1차 방어 키 (localStorage)
-    LS_KEY: "tanha_login_attempts_v1",
-    // 상담 폼 제출 쿨다운 (스팸 방지)
-    CONSULT_LS_KEY: "tanha_consult_last_v1",
-    CONSULT_COOLDOWN_MS: 30 * 1000, // 30초
-};
-
-/* ---------- 클라이언트 측 1차 방어 (localStorage) ---------- */
-function readLocalAttempt(emailKey) {
-    try {
-        const raw = localStorage.getItem(SEC.LS_KEY);
-        if (!raw) return null;
-        const data = JSON.parse(raw);
-        return data[emailKey] || null;
-    } catch { return null; }
-}
-function writeLocalAttempt(emailKey, payload) {
-    try {
-        const raw = localStorage.getItem(SEC.LS_KEY);
-        const data = raw ? JSON.parse(raw) : {};
-        if (payload === null) delete data[emailKey];
-        else data[emailKey] = payload;
-        localStorage.setItem(SEC.LS_KEY, JSON.stringify(data));
-    } catch {}
-}
-
-/**
- * 잠금 여부 확인. 잠겨있으면 { locked: true, remainingMs }, 아니면 { locked: false, attempts }
- * 클라이언트(localStorage) + 서버(Firestore) 양쪽 모두 확인.
- */
-async function checkLockStatus(email) {
-    const emailKey = email.toLowerCase();
-    const now = Date.now();
-
-    // 1) 클라이언트 측 확인 (빠른 차단)
-    const local = readLocalAttempt(emailKey);
-    if (local && local.lockedUntil && local.lockedUntil > now) {
-        return { locked: true, remainingMs: local.lockedUntil - now, attempts: local.count || SEC.MAX_ATTEMPTS };
-    }
-
-    // 2) 서버 측 확인 (우회 차단 — 진짜 방어선)
-    try {
-        const docId = encodeAttemptId(emailKey);
-        const snap = await getDoc(doc(db, "loginAttempts", docId));
-        if (snap.exists()) {
-            const d = snap.data();
-            const lockedUntil = d.lockedUntil?.toMillis ? d.lockedUntil.toMillis() : (d.lockedUntilMs || 0);
-            if (lockedUntil > now) {
-                // 서버 잠금을 클라이언트에도 동기화
-                writeLocalAttempt(emailKey, { count: d.count || SEC.MAX_ATTEMPTS, lockedUntil });
-                return { locked: true, remainingMs: lockedUntil - now, attempts: d.count || SEC.MAX_ATTEMPTS };
-            }
-            return { locked: false, attempts: d.count || 0 };
-        }
-    } catch (err) {
-        console.warn("[security] 서버 잠금 조회 실패 (오프라인 가능):", err?.message);
-    }
-    return { locked: false, attempts: (local?.count || 0) };
-}
-
-/** Firestore 문서 ID 안전화 (이메일에서 . 사용 불가 문자 변환) */
-function encodeAttemptId(email) {
-    return email.toLowerCase().replace(/[^a-z0-9]/g, "_");
-}
-
-/**
- * 로그인 실패 기록. 5회 이상이면 lockedUntil 설정.
- * 서버 + 로컬 양쪽 모두 갱신.
- */
-async function recordLoginFailure(email) {
-    const emailKey = email.toLowerCase();
-    const docId = encodeAttemptId(emailKey);
-    const now = Date.now();
-    const docRef = doc(db, "loginAttempts", docId);
-
-    let nextCount = 1;
-    let lockedUntilMs = 0;
-
-    try {
-        const snap = await getDoc(docRef);
-        if (snap.exists()) {
-            const d = snap.data();
-            const prevLockUntil = d.lockedUntil?.toMillis ? d.lockedUntil.toMillis() : (d.lockedUntilMs || 0);
-            // 이전 잠금이 끝났다면 카운트 리셋
-            if (prevLockUntil && prevLockUntil < now) {
-                nextCount = 1;
-            } else {
-                nextCount = (d.count || 0) + 1;
-            }
-        }
-
-        if (nextCount >= SEC.MAX_ATTEMPTS) {
-            lockedUntilMs = now + SEC.LOCK_MS;
-        }
-
-        await setDocSafe(docRef, {
-            email: emailKey,
-            count: nextCount,
-            lockedUntilMs: lockedUntilMs || null,
-            lockedUntil: lockedUntilMs ? new Date(lockedUntilMs) : null,
-            lastFailAt: serverTimestamp(),
-        });
-    } catch (err) {
-        console.warn("[security] 서버 실패 기록 실패:", err?.message);
-    }
-
-    // 로컬도 갱신
-    writeLocalAttempt(emailKey, {
-        count: nextCount,
-        lockedUntil: lockedUntilMs || 0,
-    });
-
-    return {
-        attempts: nextCount,
-        locked: !!lockedUntilMs,
-        lockedUntilMs,
-        remaining: Math.max(0, SEC.MAX_ATTEMPTS - nextCount),
-    };
-}
-
-/** 로그인 성공 시 카운터 리셋 */
-async function resetLoginAttempts(email) {
-    const emailKey = email.toLowerCase();
-    const docId = encodeAttemptId(emailKey);
-    try {
-        await deleteDoc(doc(db, "loginAttempts", docId));
-    } catch (err) {
-        // 문서가 없으면 정상
-    }
-    writeLocalAttempt(emailKey, null);
-}
-
-/** Firestore setDoc 래퍼 (merge=true 기본) */
-async function setDocSafe(docRef, data) {
-    return setDoc(docRef, data, { merge: true });
-}
-
-/* ---------- 관리자 검증 (Firestore admins 컬렉션 + Auth 결합) ---------- */
-/**
- * 현재 로그인한 사용자가 관리자인지 서버 측 컬렉션으로 검증.
- * admins/{uid} 문서가 존재하면 관리자.
- * 결과는 5분간 메모리 캐싱하여 Firestore 호출 절약.
- */
-let _adminCache = { uid: null, isAdmin: false, checkedAt: 0 };
-const ADMIN_CACHE_MS = 5 * 60 * 1000;
-
-async function verifyIsAdmin(user) {
-    if (!user) {
-        _adminCache = { uid: null, isAdmin: false, checkedAt: 0 };
-        return false;
-    }
-    const now = Date.now();
-    if (_adminCache.uid === user.uid && (now - _adminCache.checkedAt) < ADMIN_CACHE_MS) {
-        return _adminCache.isAdmin;
-    }
-    try {
-        const snap = await getDoc(doc(db, "admins", user.uid));
-        const isAdmin = snap.exists();
-        _adminCache = { uid: user.uid, isAdmin, checkedAt: now };
-        return isAdmin;
-    } catch (err) {
-        console.warn("[security] 관리자 검증 실패:", err?.message);
-        // 실패 시 false (안전 우선)
-        _adminCache = { uid: user.uid, isAdmin: false, checkedAt: now };
-        return false;
-    }
-}
-
-/** 동기적으로 마지막 검증 결과를 반환 (UI 렌더링용; 검증은 onAuthStateChanged에서 먼저 수행됨) */
-function isAdminSync() {
-    return _adminCache.isAdmin && auth.currentUser && _adminCache.uid === auth.currentUser.uid;
-}
-
-/* ---------- 봇 방지 (간이 honeypot + 타이밍 체크) ---------- */
-const BOT = {
-    formLoadTime: new WeakMap(),
-    MIN_FILL_MS: 1500, // 1.5초 미만에 제출되면 봇으로 판단
-};
-
-function setupHoneypot(form) {
-    if (!form) return;
-    // 이미 있으면 패스
-    if (form.querySelector('input[name="hp_website"]')) return;
-    const wrap = document.createElement("div");
-    wrap.style.cssText = "position:absolute;left:-9999px;top:-9999px;height:0;width:0;overflow:hidden;opacity:0;pointer-events:none;";
-    wrap.setAttribute("aria-hidden", "true");
-    wrap.innerHTML = `
-        <label>Website (do not fill)<input type="text" name="hp_website" tabindex="-1" autocomplete="off"></label>
-    `;
-    form.appendChild(wrap);
-    BOT.formLoadTime.set(form, Date.now());
-}
-
-function checkBotSignals(form) {
-    const hp = form.querySelector('input[name="hp_website"]');
-    if (hp && hp.value.trim().length > 0) return "honeypot";
-    const t0 = BOT.formLoadTime.get(form);
-    if (t0 && (Date.now() - t0) < BOT.MIN_FILL_MS) return "tooFast";
-    return null;
-}
-
-/* ---------- 이메일 형식 검증 (서버 도달 전 1차 검증) ---------- */
-function isValidEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254;
-}
-
-/* ---------- 잠금 메시지 포매팅 ---------- */
-function formatLockMessage(remainingMs) {
-    const min = Math.ceil(remainingMs / 60000);
-    return t("login.locked").replace("{min}", min);
-}
-function formatRemainingMessage(remaining) {
-    return t("login.remaining").replace("{n}", remaining);
-}
-
-/* ========================================================= */
-
 /* ---------- Helpers ---------- */
 const $  = (sel, ctx = document) => ctx.querySelector(sel);
 const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
@@ -1010,14 +777,12 @@ window.toggleModal = (id) => {
 };
 
 /* ---------- Auth state ---------- */
-onAuthStateChanged(auth, async (user) => {
+onAuthStateChanged(auth, (user) => {
     const authMenu     = $("#auth-menu");
     const adminMenu    = $("#admin-menu");
     const adminSection = $("#admin-only-section");
     const adminSectionNotice = $("#admin-only-section-notice");
-
-    // 서버 측 admins 컬렉션으로 검증 (이메일 단순 비교가 아님 - 변조 불가)
-    const isAdmin = await verifyIsAdmin(user);
+    const isAdmin      = user && user.email === ADMIN_EMAIL;
 
     if (authMenu) {
         authMenu.innerHTML = isAdmin
@@ -1054,9 +819,6 @@ onAuthStateChanged(auth, async (user) => {
 /* ---------- Consultation ---------- */
 const consultForm = $("#consultation-form");
 if (consultForm) {
-    // 봇 방지 honeypot
-    setupHoneypot(consultForm);
-
     consultForm.addEventListener("submit", async (e) => {
         e.preventDefault();
         const btn = consultForm.querySelector('button[type="submit"]');
@@ -1069,26 +831,6 @@ if (consultForm) {
         const message = $("#user-message").value.trim();
         const agreed  = $("#privacy-check").checked;
 
-        // ─── 봇 시그널 ───
-        const botReason = checkBotSignals(consultForm);
-        if (botReason) {
-            console.warn("[security] consult bot blocked:", botReason);
-            // 봇으로 보이면 조용히 실패 (UX상 정상 응답인 척)
-            alert(t("cons.err_submit"));
-            return;
-        }
-
-        // ─── 쿨다운 (스팸 방지) ───
-        try {
-            const last = parseInt(localStorage.getItem(SEC.CONSULT_LS_KEY) || "0", 10);
-            if (last && (Date.now() - last) < SEC.CONSULT_COOLDOWN_MS) {
-                const remain = Math.ceil((SEC.CONSULT_COOLDOWN_MS - (Date.now() - last)) / 1000);
-                alert(`잠시 후 다시 시도해주세요. (${remain}초)`);
-                return;
-            }
-        } catch {}
-
-        // ─── 입력 검증 강화 ───
         if (!name || !phone || !email || !message) {
             alert(t("cons.err_required"));
             return;
@@ -1097,28 +839,13 @@ if (consultForm) {
             alert(t("cons.err_agree"));
             return;
         }
-        if (!isValidEmail(email)) {
-            alert(t("login.email_invalid"));
-            return;
-        }
-        // 길이 상한 (DoS 방지)
-        if (name.length > 50 || phone.length > 30 || email.length > 254 || message.length > 5000) {
-            alert(t("cons.err_submit"));
-            return;
-        }
-        // 전화번호 숫자 외 7자 미만 거부 (간단한 형식 검증)
-        const phoneDigits = normalizePhone(phone);
-        if (phoneDigits.length < 9 || phoneDigits.length > 15) {
-            alert(t("cons.err_submit"));
-            return;
-        }
 
         btn.disabled = true;
         btn.textContent = t("cons.submitting");
 
         try {
             const receiptNumber = generateReceiptNumber();
-            const phoneNormalized = phoneDigits;
+            const phoneNormalized = normalizePhone(phone);
 
             await addDoc(collection(db, "consultations"), {
                 name, phone, phoneNormalized, email, type, message,
@@ -1127,19 +854,15 @@ if (consultForm) {
                 timestamp: serverTimestamp()
             });
 
-            // 쿨다운 기록
-            try { localStorage.setItem(SEC.CONSULT_LS_KEY, String(Date.now())); } catch {}
-
-            const formData = { name, phone, email, type, message };
-            await fetch(MAIL_URL, {
-                method: "POST",
-                body: JSON.stringify(formData),
-                headers: { "Content-Type": "text/plain;charset=utf-8" }
+           const formData = { name, phone, email, type, message };
+            await fetch(MAIL_URL, { 
+                method: "POST", 
+                body: JSON.stringify(formData), 
+                headers: { "Content-Type": "text/plain;charset=utf-8" } 
             }).catch(err => console.log("이메일 알림 실패:", err));
+           
 
             consultForm.reset();
-            // honeypot 재설치 (reset에 안전하게)
-            BOT.formLoadTime.set(consultForm, Date.now());
 
             // 접수번호 안내 모달
             const numEl = $("#receipt-number");
@@ -1190,7 +913,7 @@ async function loadCases() {
             return;
         }
 
-        const isAdmin = isAdminSync();
+        const isAdmin = auth.currentUser && auth.currentUser.email === ADMIN_EMAIL;
         const html = items.map(d => {
             const id       = d.id;
             const title    = escapeHTML(d.title || t("cases.no_title"));
@@ -1301,9 +1024,7 @@ async function loadConsultations() {
     const count = $("#consults-count");
     if (!list) return;
 
-    // 서버 측 admins 컬렉션으로 재검증 (캐시가 비어있을 수도 있으니 await)
-    const adminOk = await verifyIsAdmin(auth.currentUser);
-    if (!adminOk) {
+    if (!auth.currentUser || auth.currentUser.email !== ADMIN_EMAIL) {
         list.innerHTML = `<div class="consults-empty">${t("cm.admin_only")}</div>`;
         if (count) count.textContent = "0";
         return;
@@ -1550,68 +1271,23 @@ if (postForm) {
     });
 }
 
-/* ---------- Login (with brute-force protection) ---------- */
+/* ---------- Login ---------- */
 const authForm = $("#auth-form");
 if (authForm) {
-    // 봇 방지 honeypot 설치
-    setupHoneypot(authForm);
-
     authForm.addEventListener("submit", async (e) => {
         e.preventDefault();
         const btn = authForm.querySelector('button[type="submit"]');
         const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = t("login.loading");
 
         const email    = $("#auth-email").value.trim();
         const password = $("#auth-password").value;
 
-        // ─── 0. 봇 시그널 확인 ───
-        const botReason = checkBotSignals(authForm);
-        if (botReason) {
-            console.warn("[security] bot blocked:", botReason);
-            alert(t("login.bot_blocked"));
-            return;
-        }
-
-        // ─── 1. 이메일 형식 검증 ───
-        if (!isValidEmail(email)) {
-            alert(t("login.email_invalid"));
-            return;
-        }
-        if (!password || password.length < 1) {
-            alert(t("cons.err_required"));
-            return;
-        }
-
-        btn.disabled = true;
-        btn.textContent = t("login.loading");
-
         try {
-            // ─── 2. 잠금 상태 확인 ───
-            const lockStatus = await checkLockStatus(email);
-            if (lockStatus.locked) {
-                alert(formatLockMessage(lockStatus.remainingMs));
-                return;
-            }
-
-            // ─── 3. 실제 로그인 시도 ───
-            try {
-                await signInWithEmailAndPassword(auth, email, password);
-                // 성공 → 카운터 리셋
-                await resetLoginAttempts(email);
-                authForm.reset();
-                closeModal("login-modal");
-                // honeypot 재설치 (form.reset이 동적 필드는 안 지움)
-                BOT.formLoadTime.set(authForm, Date.now());
-            } catch (loginErr) {
-                console.error("[login] auth failed:", loginErr?.code);
-                // ─── 4. 실패 기록 ───
-                const result = await recordLoginFailure(email);
-                if (result.locked) {
-                    alert(formatLockMessage(SEC.LOCK_MS));
-                } else {
-                    alert(t("login.fail") + "\n" + formatRemainingMessage(result.remaining));
-                }
-            }
+            await signInWithEmailAndPassword(auth, email, password);
+            authForm.reset();
+            closeModal("login-modal");
         } catch (err) {
             console.error(err);
             alert(t("login.fail"));
@@ -1815,7 +1491,7 @@ async function loadCaseDetail() {
                </div>`
             : "";
 
-        const isAdmin = isAdminSync();
+        const isAdmin = auth.currentUser && auth.currentUser.email === ADMIN_EMAIL;
         const adminHtml = isAdmin
             ? `<div class="case-detail-admin">
                    <button class="delete-btn" data-action="delete-case-detail" data-id="${escapeHTML(id)}" type="button">${t("cases.delete_detail")}</button>
@@ -1997,7 +1673,7 @@ async function loadNotices() {
             return;
         }
 
-        const isAdmin = isAdminSync();
+        const isAdmin = auth.currentUser && auth.currentUser.email === ADMIN_EMAIL;
         const html = items.map(d => {
             const id       = d.id;
             const title    = escapeHTML(d.title || t("cases.no_title"));
@@ -2195,7 +1871,7 @@ async function loadNoticeDetail() {
                </div>`
             : "";
 
-        const isAdmin = isAdminSync();
+        const isAdmin = auth.currentUser && auth.currentUser.email === ADMIN_EMAIL;
         const adminHtml = isAdmin
             ? `<div class="notice-detail-admin">
                    <button class="delete-btn" data-action="delete-notice-detail" data-id="${escapeHTML(id)}" type="button">${t("notice.delete_detail")}</button>
