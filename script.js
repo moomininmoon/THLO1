@@ -712,7 +712,7 @@ const firebaseConfig = {
     messagingSenderId: "882787510142",
     appId: "1:882787510142:web:36f4b2342ed9a2dfcd752f"
 };
-const ADMIN_EMAIL = "tanhalaw1@gmail.com";
+const ADMIN_EMAIL = "tanhalaw1@gmail.com", "tanhalawoffice@gmail.com";
 
 const MAIL_URL = "https://script.google.com/macros/s/AKfycbw_LmMmLvQv6MhD6438LLjRGV9MIo67A2a5789UeWTslD56Db7fE6_S3J5npHn2gV-q/exec";
 
